@@ -1,0 +1,103 @@
+[
+  {
+    "id": 1,
+    "name": "新手冒险者",
+    "displayOrder": 1,
+    "color": 16777215,
+    "chromaType": "WHITE_GRAY",
+    "description": "刚刚踏上冒险之旅的旅人",
+    "category": "adventure",
+    "icon": "playertitleclient:textures/title/title_1.png",
+    "iconColor": "#ffffff",
+    "conditions": [
+      { "type": "KILL_ANY_HOSTILE", "target": "", "requiredCount": 1 }
+    ],
+    "buffs": []
+  },
+  {
+    "id": 2,
+    "name": "怪物猎人",
+    "displayOrder": 2,
+    "color": 16738740,
+    "chromaType": "GREEN_WHITE",
+    "description": "击杀了100只敌对生物的勇者",
+    "category": "combat",
+    "icon": "playertitleclient:textures/title/title_1.png",
+    "iconColor": "#55ff55",
+    "conditions": [
+      { "type": "KILL_ANY_HOSTILE", "target": "", "requiredCount": 100 }
+    ],
+    "buffs": [
+      { "type": "ATTACK_DAMAGE", "value": 1.0, "target": "all" }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "生存专家",
+    "displayOrder": 3,
+    "color": 65280,
+    "chromaType": "CYAN_WHITE",
+    "description": "存活超过60分钟的生存达人",
+    "category": "survival",
+    "icon": "",
+    "iconColor": "#ffffff",
+    "conditions": [
+      { "type": "SURVIVAL_TIME", "target": "", "requiredCount": 60 }
+    ],
+    "buffs": [
+      { "type": "MAX_HEALTH", "value": 2.0, "target": "all" }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "僵尸克星",
+    "displayOrder": 4,
+    "color": 65535,
+    "chromaType": "BLUE_WHITE",
+    "description": "击杀了50只僵尸的猎手",
+    "category": "combat",
+    "icon": "",
+    "iconColor": "#ffffff",
+    "conditions": [
+      { "type": "KILL_MOB", "target": "entity.minecraft.zombie", "requiredCount": 50 }
+    ],
+    "buffs": [
+      { "type": "ATTACK_DAMAGE", "value": 0.5, "target": "entity.minecraft.zombie" }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "骷髅杀手",
+    "displayOrder": 5,
+    "color": 11184810,
+    "chromaType": "BLUE_WHITE",
+    "description": "击杀了50只骷髅的射手",
+    "category": "combat",
+    "icon": "",
+    "iconColor": "#ffffff",
+    "conditions": [
+      { "type": "KILL_MOB", "target": "entity.minecraft.skeleton", "requiredCount": 50 }
+    ],
+    "buffs": [
+      { "type": "ARMOR", "value": 1.0, "target": "all" }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "不朽传说",
+    "displayOrder": 10,
+    "color": 16766720,
+    "chromaType": "RAINBOW",
+    "description": "存活超过600分钟的不朽者",
+    "category": "survival",
+    "icon": "",
+    "iconColor": "#ffffff",
+    "conditions": [
+      { "type": "SURVIVAL_TIME", "target": "", "requiredCount": 600 }
+    ],
+    "buffs": [
+      { "type": "MAX_HEALTH", "value": 4.0, "target": "all" },
+      { "type": "SPEED", "value": 0.05, "target": "all" }
+    ]
+  }
+]

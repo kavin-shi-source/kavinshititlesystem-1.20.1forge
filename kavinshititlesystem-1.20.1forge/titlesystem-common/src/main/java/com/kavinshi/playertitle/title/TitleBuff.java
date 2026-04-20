@@ -1,0 +1,35 @@
+package com.kavinshi.playertitle.title;
+
+public final class TitleBuff {
+    private final BuffType type;
+    private final double value;
+    private final String target;
+
+    public TitleBuff(BuffType type, double value, String target) {
+        this.type = type;
+        this.value = value;
+        this.target = target == null ? "" : target;
+    }
+
+    public BuffType getType() { return this.type; }
+    public double getValue() { return this.value; }
+    public String getTarget() { return this.target; }
+
+    public boolean appliesToTarget(String entityType) {
+        if (this.type != BuffType.DAMAGE_MULTIPLIER) return true;
+        if (this.target.isEmpty() || this.target.equalsIgnoreCase("all")) return true;
+        return this.target.equalsIgnoreCase(entityType);
+    }
+
+    public static BuffType typeFromString(String name) {
+        try {
+            return BuffType.valueOf(name.toUpperCase());
+        } catch (Exception e) {
+            return BuffType.ATTACK_DAMAGE;
+        }
+    }
+
+    public enum BuffType {
+        ATTACK_DAMAGE, DAMAGE_MULTIPLIER, MAX_HEALTH, SPEED, ARMOR, ARMOR_TOUGHNESS, LUCK
+    }
+}

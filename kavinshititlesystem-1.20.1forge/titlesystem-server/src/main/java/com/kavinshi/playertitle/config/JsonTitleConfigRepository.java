@@ -2,11 +2,7 @@ package com.kavinshi.playertitle.config;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
-import com.kavinshi.playertitle.title.TitleAnimationProfile;
-import com.kavinshi.playertitle.title.TitleCondition;
-import com.kavinshi.playertitle.title.TitleConditionType;
-import com.kavinshi.playertitle.title.TitleDefinition;
-import com.kavinshi.playertitle.title.TitleStyleMode;
+import com.kavinshi.playertitle.title.*;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
@@ -47,12 +43,26 @@ public final class JsonTitleConfigRepository implements TitleConfigRepository {
             }
         }
 
+        List<TitleBuff> buffs = new ArrayList<>();
+        if (raw.buffs != null) {
+            for (JsonTitleBuff buff : raw.buffs) {
+                buffs.add(new TitleBuff(
+                    TitleBuff.BuffType.valueOf(buff.type),
+                    buff.value,
+                    buff.target
+                ));
+            }
+        }
+
         return new TitleDefinition(
             raw.id,
             raw.name,
             raw.displayOrder,
             raw.color,
+            raw.chromaType,
             conditions,
+            buffs,
+            raw.description,
             raw.category,
             raw.icon,
             raw.iconColor,
@@ -61,7 +71,8 @@ public final class JsonTitleConfigRepository implements TitleConfigRepository {
             raw.animationProfile == null ? null : new TitleAnimationProfile(
                 raw.animationProfile.cycleMillis,
                 raw.animationProfile.stepSize
-            )
+            ),
+            raw.auraEffect
         );
     }
 
@@ -70,19 +81,29 @@ public final class JsonTitleConfigRepository implements TitleConfigRepository {
         String name;
         int displayOrder;
         int color;
+        String chromaType;
+        String description;
         String category;
         String icon;
         String iconColor;
         String styleMode;
         String[] baseColors;
         JsonAnimationProfile animationProfile;
+        String auraEffect;
         JsonTitleCondition[] conditions;
+        JsonTitleBuff[] buffs;
     }
 
     private static final class JsonTitleCondition {
         String type;
         String target;
         int requiredCount;
+    }
+
+    private static final class JsonTitleBuff {
+        String type;
+        double value;
+        String target;
     }
 
     private static final class JsonAnimationProfile {

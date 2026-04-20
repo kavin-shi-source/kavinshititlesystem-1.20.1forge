@@ -1,5 +1,8 @@
 # Worktrees
 .worktrees/
+decompiled-src/
+decompiled-dlss/
+docs/
 
 # IDE
 .idea/
@@ -9,7 +12,7 @@ build/
 .gradle/
 out/
 target/
-
+.tools
 # Dependencies
 node_modules/
 

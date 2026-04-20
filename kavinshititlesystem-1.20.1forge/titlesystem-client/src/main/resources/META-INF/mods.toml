@@ -25,10 +25,3 @@ mandatory=true
 versionRange="[${minecraft_version},1.21)"
 ordering="NONE"
 side="CLIENT"
-
-[[dependencies.playertitleclient]]
-modId="playertitleserver"
-mandatory=false
-versionRange="[${mod_version},)"
-ordering="AFTER"
-side="CLIENT"
