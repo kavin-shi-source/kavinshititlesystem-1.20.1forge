@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="playertitleserver"
+version="${mod_version}"
+displayName="${mod_name} (Server)"
+authors="${mod_authors}"
+description='''
+${mod_description}
+Server-side module for player title system with cross-server sync.
+'''
+
+[[dependencies.playertitleserver]]
+modId="forge"
+mandatory=true
+versionRange="${loader_version_range}"
+ordering="NONE"
+side="SERVER"
+
+[[dependencies.playertitleserver]]
+modId="minecraft"
+mandatory=true
+versionRange="[${minecraft_version},1.21)"
+ordering="NONE"
+side="SERVER"
+
+[[dependencies.playertitleserver]]
+modId="playertitleclient"
+mandatory=false
+versionRange="[${mod_version},)"
+ordering="AFTER"
+side="SERVER"

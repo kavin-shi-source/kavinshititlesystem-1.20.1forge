@@ -1,0 +1,34 @@
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+
+[[mods]]
+modId="playertitleclient"
+version="${mod_version}"
+displayName="${mod_name} (Client)"
+authors="${mod_authors}"
+description='''
+${mod_description}
+Client-side module for player title rendering and icon display.
+'''
+
+[[dependencies.playertitleclient]]
+modId="forge"
+mandatory=true
+versionRange="${loader_version_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.playertitleclient]]
+modId="minecraft"
+mandatory=true
+versionRange="[${minecraft_version},1.21)"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.playertitleclient]]
+modId="playertitleserver"
+mandatory=false
+versionRange="[${mod_version},)"
+ordering="AFTER"
+side="CLIENT"

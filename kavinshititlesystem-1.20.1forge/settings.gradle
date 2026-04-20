@@ -6,3 +6,13 @@ pluginManagement {
 }
 
 rootProject.name = 'kavinshis-playertitle'
+
+// 定义三个子模块
+include 'titlesystem-common'
+include 'titlesystem-server'
+include 'titlesystem-client'
+
+// 设置模块项目目录
+project(':titlesystem-common').projectDir = file('titlesystem-common')
+project(':titlesystem-server').projectDir = file('titlesystem-server')
+project(':titlesystem-client').projectDir = file('titlesystem-client')

@@ -1,108 +1,72 @@
+// 根项目构建脚本 - 仅用于子模块管理
 plugins {
-    id 'eclipse'
-    id 'idea'
+    id 'java'
     id 'maven-publish'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
 }
 
-version = mod_version
-group = mod_group_id
-
-base {
-    archivesName = mod_id
+// 定义所有子模块共享的扩展属性
+ext {
+    // 从gradle.properties读取的属性会自动可用
+    // 这里可以定义额外的共享属性
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-
-minecraft {
-    mappings channel: mapping_channel, version: mapping_version
-    copyIdeResources = true
-
-    runs {
-        configureEach {
-            workingDirectory project.file('run')
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                "${mod_id}" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        client {
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-
-        server {
-            property 'forge.enabledGameTestNamespaces', mod_id
-            args '--nogui'
-        }
-
-        gameTestServer {
-            property 'forge.enabledGameTestNamespaces', mod_id
-        }
-
-        data {
-            workingDirectory project.file('run-data')
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
-        }
+// 配置所有子模块
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+    
+    group = mod_group_id
+    version = mod_version
+    
+    java {
+        toolchain.languageVersion = JavaLanguageVersion.of(17)
+    }
+    
+    repositories {
+        mavenCentral()
+    }
+    
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+    
+    tasks.withType(Javadoc).configureEach {
+        options.encoding = 'UTF-8'
+        options.addStringOption('charset', 'UTF-8')
+        options.addStringOption('docencoding', 'UTF-8')
+    }
+    
+    // 测试配置
+    tasks.named('test', Test).configure {
+        useJUnitPlatform()
     }
 }
 
-sourceSets.main.resources {
-    srcDir 'src/generated/resources'
+// 配置特定模块
+project(':titlesystem-common') {
+    // common模块的特殊配置（如果有）
 }
 
-repositories {
-    mavenCentral()
+project(':titlesystem-server') {
+    // server模块的特殊配置（如果有）
 }
 
-dependencies {
-    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
-
-    testImplementation platform('org.junit:junit-bom:5.10.2')
-    testImplementation 'org.junit.jupiter:junit-jupiter'
+project(':titlesystem-client') {
+    // client模块的特殊配置（如果有）
 }
 
-tasks.named('test', Test).configure {
-    useJUnitPlatform()
+// 根项目本身的配置（如果需要）
+tasks.register('buildAll') {
+    dependsOn subprojects.collect { it.tasks.named('build') }
+    description = '构建所有子模块'
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
+tasks.register('testAll') {
+    dependsOn subprojects.collect { it.tasks.named('test') }
+    description = '测试所有子模块'
 }
 
-processResources {
-    def replaceProperties = [
-        minecraft_version    : minecraft_version,
-        forge_version        : forge_version,
-        loader_version_range : loader_version_range,
-        mod_id               : mod_id,
-        mod_name             : mod_name,
-        mod_license          : mod_license,
-        mod_version          : mod_version,
-        mod_authors          : mod_authors,
-        mod_description      : mod_description
-    ]
-
-    inputs.properties replaceProperties
-
-    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
-        expand replaceProperties
-    }
-}
-
-jar {
-    manifest {
-        attributes([
-            'Specification-Title'   : mod_name,
-            'Specification-Vendor'  : mod_authors,
-            'Specification-Version' : '1',
-            'Implementation-Title'  : project.name,
-            'Implementation-Version': project.version,
-            'Implementation-Vendor' : mod_authors
-        ])
-    }
+tasks.register('cleanAll') {
+    dependsOn subprojects.collect { it.tasks.named('clean') }
+    description = '清理所有子模块'
 }
