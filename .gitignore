@@ -1,0 +1,24 @@
+# Worktrees
+.worktrees/
+
+# IDE
+.idea/
+
+# Build outputs
+build/
+.gradle/
+out/
+target/
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.class
+*.jar
+*.war
+*.ear
