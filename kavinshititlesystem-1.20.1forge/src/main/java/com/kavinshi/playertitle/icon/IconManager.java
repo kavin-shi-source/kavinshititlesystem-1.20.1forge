@@ -153,7 +153,22 @@ public class IconManager {
             int height = ((header[20] & 0xFF) << 24) | ((header[21] & 0xFF) << 16) |
                         ((header[22] & 0xFF) << 8) | (header[23] & 0xFF);
             
+            // 验证尺寸：必须为16x16或32x32
+            validateImageDimensions(width, height);
+            
             return new ImageDimensions(width, height);
+        }
+    }
+    
+    /**
+     * 验证图像尺寸是否符合要求（16x16或32x32）。
+     */
+    private void validateImageDimensions(int width, int height) throws IOException {
+        boolean valid = (width == 16 && height == 16) || (width == 32 && height == 32);
+        if (!valid) {
+            throw new IOException(
+                String.format("PNG image dimensions must be 16x16 or 32x32, got %dx%d", width, height)
+            );
         }
     }
 

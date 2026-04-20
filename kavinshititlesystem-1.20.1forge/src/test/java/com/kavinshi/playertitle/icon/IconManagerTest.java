@@ -78,7 +78,7 @@ class IconManagerTest {
         // 创建多个PNG文件
         createSimplePng(tempDir.resolve("icon1.png"), 16, 16);
         createSimplePng(tempDir.resolve("icon2.png"), 32, 32);
-        createSimplePng(tempDir.resolve("icon3.png"), 24, 24);
+        createSimplePng(tempDir.resolve("icon3.png"), 16, 16);
         
         IconManager manager = new IconManager(tempDir);
         manager.scanIcons();
@@ -143,7 +143,7 @@ class IconManagerTest {
     void unicodeCharacterAllocationIncrements() throws IOException {
         createSimplePng(tempDir.resolve("icon1.png"), 16, 16);
         createSimplePng(tempDir.resolve("icon2.png"), 32, 32);
-        createSimplePng(tempDir.resolve("icon3.png"), 24, 24);
+        createSimplePng(tempDir.resolve("icon3.png"), 16, 16);
         
         IconManager manager = new IconManager(tempDir);
         manager.scanIcons();
