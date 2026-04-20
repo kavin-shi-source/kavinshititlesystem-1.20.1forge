@@ -1,7 +1,9 @@
 package com.kavinshi.playertitle.handler;
 
 import com.kavinshi.playertitle.bootstrap.RewriteBootstrap;
+import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.player.TitleCapability;
+import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.TitleDefinition;
 import com.kavinshi.playertitle.title.TitleRegistry;
 import net.minecraft.network.chat.Component;
@@ -22,14 +24,19 @@ public final class ChatHandler {
     public static void onServerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
         TitleCapability.get(player).ifPresent(state -> {
-            int titleId = state.getEquippedTitleId();
-            if (titleId < 0) return;
+            MutableComponent titleComponent = null;
 
-            TitleRegistry registry = RewriteBootstrap.getInstance().getTitleRegistry();
-            TitleDefinition title = registry.getTitle(titleId);
-            if (title == null) return;
-
-            MutableComponent titleComponent = createTitleComponent(title);
+            CustomTitleData ct = state.getCustomTitle();
+            if (ct.isUsingCustomTitle() && ct.hasPermission()) {
+                titleComponent = createCustomTitleComponent(ct);
+            } else {
+                int titleId = state.getEquippedTitleId();
+                if (titleId < 0) return;
+                TitleRegistry registry = RewriteBootstrap.getInstance().getTitleRegistry();
+                TitleDefinition title = registry.getTitle(titleId);
+                if (title == null) return;
+                titleComponent = createTitleComponent(title);
+            }
 
             HoverEvent.EntityTooltipInfo entityInfo = new HoverEvent.EntityTooltipInfo(
                 EntityType.PLAYER, player.getUUID(), player.getDisplayName());
@@ -55,6 +62,16 @@ public final class ChatHandler {
         String display = "[" + title.getName() + "]";
         MutableComponent component = Component.literal(display);
         int color = title.getColor();
+        if (color != 0xFFFFFF) {
+            component.withStyle(style -> style.withColor(TextColor.fromRgb(color & 0xFFFFFF)));
+        }
+        return component;
+    }
+
+    private static MutableComponent createCustomTitleComponent(CustomTitleData ct) {
+        String display = "[" + ct.getText() + "]";
+        MutableComponent component = Component.literal(display);
+        int color = ct.getColor1();
         if (color != 0xFFFFFF) {
             component.withStyle(style -> style.withColor(TextColor.fromRgb(color & 0xFFFFFF)));
         }

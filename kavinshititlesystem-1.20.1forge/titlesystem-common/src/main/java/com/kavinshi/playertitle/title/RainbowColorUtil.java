@@ -14,8 +14,22 @@ public final class RainbowColorUtil {
             case RED_BLACK -> getRedBlackChroma(charIndex, totalChars);
             case DARK_RED_PURPLE -> getDarkRedPurpleChroma(charIndex, totalChars);
             case GOLD_BLACK -> getGoldBlackChroma(charIndex, totalChars);
+            case CUSTOM_GRADIENT -> 0xFFFFFF;
             default -> 0xFFFFFF;
         };
+    }
+
+    public static int getGradientColorForChar(int color1, int color2, int charIndex, int totalChars) {
+        float time = (float) (System.currentTimeMillis() % 2000L) / 2000.0f;
+        float charOffset = (float) charIndex / Math.max(totalChars, 1) * 0.5f;
+        float blend = (float) (Math.sin((time + charOffset) * Math.PI * 2.0) * 0.5 + 0.5);
+
+        int r1 = (color1 >> 16) & 0xFF, g1 = (color1 >> 8) & 0xFF, b1 = color1 & 0xFF;
+        int r2 = (color2 >> 16) & 0xFF, g2 = (color2 >> 8) & 0xFF, b2 = color2 & 0xFF;
+        int r = (int) (r1 + (r2 - r1) * blend);
+        int g = (int) (g1 + (g2 - g1) * blend);
+        int b = (int) (b1 + (b2 - b1) * blend);
+        return r << 16 | g << 8 | b;
     }
 
     public static int getRainbowColorForChar(int charIndex, int totalChars) {

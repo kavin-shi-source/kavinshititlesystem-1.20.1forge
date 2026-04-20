@@ -1,5 +1,7 @@
 package com.kavinshi.playertitle.player;
 
+import com.kavinshi.playertitle.title.CustomTitleData;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -13,6 +15,7 @@ public final class PlayerTitleState {
     private int equippedTitleId = -1;
     private int aliveMinutes;
     private boolean dirty = true;
+    private final CustomTitleData customTitle = new CustomTitleData();
 
     public PlayerTitleState(UUID playerId) {
         this.playerId = playerId;
@@ -77,6 +80,48 @@ public final class PlayerTitleState {
             if (this.equippedTitleId == titleId) {
                 this.equippedTitleId = -1;
             }
+            this.dirty = true;
+        }
+    }
+
+    public CustomTitleData getCustomTitle() {
+        return this.customTitle;
+    }
+
+    public void setCustomTitlePermission(int permission) {
+        if (this.customTitle.getPermission() != permission) {
+            this.customTitle.setPermission(permission);
+            if (permission < CustomTitleData.PERMISSION_GRADIENT) {
+                this.customTitle.setColor2(this.customTitle.getColor1());
+            }
+            if (permission == CustomTitleData.PERMISSION_NONE) {
+                this.customTitle.setUsingCustomTitle(false);
+            }
+            this.dirty = true;
+        }
+    }
+
+    public void setCustomTitleText(String text) {
+        this.customTitle.setText(text);
+        this.customTitle.setLastModifiedTime(System.currentTimeMillis());
+        this.dirty = true;
+    }
+
+    public void setCustomTitleColor1(int color) {
+        this.customTitle.setColor1(color);
+        this.customTitle.setLastModifiedTime(System.currentTimeMillis());
+        this.dirty = true;
+    }
+
+    public void setCustomTitleColor2(int color) {
+        this.customTitle.setColor2(color);
+        this.customTitle.setLastModifiedTime(System.currentTimeMillis());
+        this.dirty = true;
+    }
+
+    public void setUsingCustomTitle(boolean using) {
+        if (this.customTitle.isUsingCustomTitle() != using) {
+            this.customTitle.setUsingCustomTitle(using);
             this.dirty = true;
         }
     }

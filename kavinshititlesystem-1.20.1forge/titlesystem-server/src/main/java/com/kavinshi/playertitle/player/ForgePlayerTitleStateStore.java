@@ -1,5 +1,6 @@
 package com.kavinshi.playertitle.player;
 
+import com.kavinshi.playertitle.title.CustomTitleData;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 
@@ -15,6 +16,17 @@ public final class ForgePlayerTitleStateStore {
             killCountsTag.putInt(entry.getKey(), entry.getValue());
         }
         root.put("killCounts", killCountsTag);
+
+        CustomTitleData ct = state.getCustomTitle();
+        CompoundTag ctTag = new CompoundTag();
+        ctTag.putString("text", ct.getText());
+        ctTag.putInt("permission", ct.getPermission());
+        ctTag.putInt("color1", ct.getColor1());
+        ctTag.putInt("color2", ct.getColor2());
+        ctTag.putBoolean("usingCustomTitle", ct.isUsingCustomTitle());
+        ctTag.putLong("lastModifiedTime", ct.getLastModifiedTime());
+        root.put("customTitle", ctTag);
+
         return root;
     }
 
@@ -35,6 +47,17 @@ public final class ForgePlayerTitleStateStore {
 
         state.setAliveMinutes(tag.getInt("aliveMinutes"));
         state.setEquippedTitleId(tag.getInt("equippedTitleId"));
+
+        if (tag.contains("customTitle")) {
+            CompoundTag ctTag = tag.getCompound("customTitle");
+            state.setCustomTitlePermission(ctTag.getInt("permission"));
+            state.setCustomTitleText(ctTag.getString("text"));
+            state.setCustomTitleColor1(ctTag.getInt("color1"));
+            state.setCustomTitleColor2(ctTag.getInt("color2"));
+            state.setUsingCustomTitle(ctTag.getBoolean("usingCustomTitle"));
+            state.getCustomTitle().setLastModifiedTime(ctTag.getLong("lastModifiedTime"));
+        }
+
         state.markClean();
         return state;
     }

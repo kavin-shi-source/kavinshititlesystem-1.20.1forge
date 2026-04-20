@@ -2,6 +2,7 @@ package com.kavinshi.playertitle.client.render;
 
 import com.kavinshi.playertitle.client.ClientTitleData;
 import com.kavinshi.playertitle.title.ChromaType;
+import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.RainbowColorUtil;
 import com.kavinshi.playertitle.title.TitleDefinition;
 import net.minecraft.client.Minecraft;
@@ -27,25 +28,41 @@ public final class TitleNameplateRenderer {
         double distSq = player.distanceToSqr(Minecraft.getInstance().getCameraEntity());
         if (distSq > 4096.0) return;
 
-        ClientTitleData.EquippedTitleInfo info = ClientTitleData.getEquippedTitleForPlayer(player.getUUID());
-        if (info == null || info.titleId < 0) return;
+        boolean isSelf = player.getUUID().equals(Minecraft.getInstance().player.getUUID());
+        String titleName;
+        ChromaType chroma;
+        int titleColor;
 
-        String titleName = info.titleName != null && !info.titleName.isEmpty()
-            ? info.titleName : findTitleName(info.titleId);
-        if (titleName == null) return;
+        if (isSelf && ClientTitleData.isUsingCustomTitle()) {
+            CustomTitleData ct = ClientTitleData.getCustomTitle();
+            titleName = ct.getText();
+            chroma = ct.getEffectiveChromaType();
+            titleColor = ct.getColor1();
+        } else {
+            ClientTitleData.EquippedTitleInfo info = ClientTitleData.getEquippedTitleForPlayer(player.getUUID());
+            if (info == null || info.titleId < 0) return;
+            titleName = info.titleName != null && !info.titleName.isEmpty()
+                ? info.titleName : findTitleName(info.titleId);
+            if (titleName == null) return;
+            chroma = ChromaType.fromString(info.chromaType);
+            titleColor = info.titleColor;
+        }
 
-        ChromaType chroma = ChromaType.fromString(info.chromaType);
+        if (titleName.isEmpty()) return;
 
-        MutableComponent bracket = Component.literal("[ ");
         int frameColor = chroma.getFrameColor();
-        bracket.withStyle(style -> style.withColor(TextColor.fromRgb(frameColor)));
+        MutableComponent bracket = Component.literal("[ ").withStyle(s -> s.withColor(TextColor.fromRgb(frameColor)));
+        MutableComponent closeBracket = Component.literal(" ]").withStyle(s -> s.withColor(TextColor.fromRgb(frameColor)));
 
-        MutableComponent titleText = chroma.hasChroma()
-            ? buildChromaComponent(titleName, chroma)
-            : Component.literal(titleName).withStyle(style -> style.withColor(TextColor.fromRgb(info.titleColor & 0xFFFFFF)));
-
-        MutableComponent closeBracket = Component.literal(" ]");
-        closeBracket.withStyle(style -> style.withColor(TextColor.fromRgb(frameColor)));
+        MutableComponent titleText;
+        if (chroma == ChromaType.CUSTOM_GRADIENT && isSelf) {
+            CustomTitleData ct = ClientTitleData.getCustomTitle();
+            titleText = buildGradientComponent(titleName, ct.getColor1(), ct.getColor2());
+        } else if (chroma.hasChroma()) {
+            titleText = buildChromaComponent(titleName, chroma);
+        } else {
+            titleText = Component.literal(titleName).withStyle(s -> s.withColor(TextColor.fromRgb(titleColor & 0xFFFFFF)));
+        }
 
         event.setContent(bracket.append(titleText).append(closeBracket).append(event.getContent()));
     }
@@ -54,6 +71,16 @@ public final class TitleNameplateRenderer {
         MutableComponent result = Component.literal("");
         for (int i = 0; i < text.length(); i++) {
             int color = RainbowColorUtil.getChromaColorForChar(chroma, i, text.length());
+            result.append(Component.literal(String.valueOf(text.charAt(i)))
+                .withStyle(s -> s.withColor(TextColor.fromRgb(color))));
+        }
+        return result;
+    }
+
+    private static MutableComponent buildGradientComponent(String text, int color1, int color2) {
+        MutableComponent result = Component.literal("");
+        for (int i = 0; i < text.length(); i++) {
+            int color = RainbowColorUtil.getGradientColorForChar(color1, color2, i, text.length());
             result.append(Component.literal(String.valueOf(text.charAt(i)))
                 .withStyle(s -> s.withColor(TextColor.fromRgb(color))));
         }

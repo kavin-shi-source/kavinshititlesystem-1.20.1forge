@@ -1,5 +1,6 @@
 package com.kavinshi.playertitle.network;
 
+import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.TitleDefinition;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -39,10 +40,11 @@ public final class PacketHandlers {
     }
 
     static void handleSyncPlayerTitles(UUID playerId, Set<Integer> unlockedTitleIds,
-                                        int equippedTitleId, Map<String, Integer> killCounts, int aliveMinutes) {
+                                        int equippedTitleId, Map<String, Integer> killCounts,
+                                        int aliveMinutes, CustomTitleData customTitle) {
         if (syncPlayerTitlesHandler != null) {
             syncPlayerTitlesHandler.accept(new SyncPlayerTitlesContext(
-                playerId, unlockedTitleIds, equippedTitleId, killCounts, aliveMinutes));
+                playerId, unlockedTitleIds, equippedTitleId, killCounts, aliveMinutes, customTitle));
         }
     }
 
@@ -78,14 +80,17 @@ public final class PacketHandlers {
         public final int equippedTitleId;
         public final Map<String, Integer> killCounts;
         public final int aliveMinutes;
+        public final CustomTitleData customTitle;
 
         public SyncPlayerTitlesContext(UUID playerId, Set<Integer> unlockedTitleIds,
-                                        int equippedTitleId, Map<String, Integer> killCounts, int aliveMinutes) {
+                                        int equippedTitleId, Map<String, Integer> killCounts,
+                                        int aliveMinutes, CustomTitleData customTitle) {
             this.playerId = playerId;
             this.unlockedTitleIds = unlockedTitleIds;
             this.equippedTitleId = equippedTitleId;
             this.killCounts = killCounts;
             this.aliveMinutes = aliveMinutes;
+            this.customTitle = customTitle;
         }
     }
 

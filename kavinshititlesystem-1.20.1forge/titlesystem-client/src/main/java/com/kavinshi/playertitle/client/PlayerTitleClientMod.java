@@ -6,7 +6,6 @@ import com.kavinshi.playertitle.network.RequestSyncPacket;
 import com.kavinshi.playertitle.title.TitleDefinition;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -28,8 +27,11 @@ public final class PlayerTitleClientMod {
 
     private void registerClientPacketHandlers() {
         PacketHandlers.registerSyncPlayerTitlesHandler(ctx -> {
-            ClientTitleData.updatePlayerData(ctx.equippedTitleId, ctx.unlockedTitleIds, ctx.killCounts, ctx.aliveMinutes);
-            LOGGER.debug("Synced player titles: equipped={}, unlocked={}", ctx.equippedTitleId, ctx.unlockedTitleIds.size());
+            ClientTitleData.updatePlayerData(ctx.equippedTitleId, ctx.unlockedTitleIds,
+                ctx.killCounts, ctx.aliveMinutes, ctx.customTitle);
+            LOGGER.debug("Synced player titles: equipped={}, unlocked={}, custom={}",
+                ctx.equippedTitleId, ctx.unlockedTitleIds.size(),
+                ctx.customTitle != null ? ctx.customTitle.getPermissionName() : "null");
         });
 
         PacketHandlers.registerSyncTitleRegistryHandler(ctx -> {

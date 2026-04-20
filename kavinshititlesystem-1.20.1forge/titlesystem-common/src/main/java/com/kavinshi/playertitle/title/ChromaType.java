@@ -10,7 +10,8 @@ public enum ChromaType {
     BLACK_WHITE,
     RED_BLACK,
     DARK_RED_PURPLE,
-    GOLD_BLACK;
+    GOLD_BLACK,
+    CUSTOM_GRADIENT;
 
     public boolean hasChroma() {
         return this != NONE;
@@ -28,6 +29,7 @@ public enum ChromaType {
             case RED_BLACK -> 7;
             case DARK_RED_PURPLE -> 8;
             case GOLD_BLACK -> 9;
+            case CUSTOM_GRADIENT -> 4;
         };
     }
 
@@ -43,6 +45,7 @@ public enum ChromaType {
             case RED_BLACK -> "Supreme";
             case DARK_RED_PURPLE -> "Apex";
             case GOLD_BLACK -> "Ultimate";
+            case CUSTOM_GRADIENT -> "Custom";
         };
     }
 
@@ -58,6 +61,7 @@ public enum ChromaType {
             case RED_BLACK -> 0xFFFF5555;
             case DARK_RED_PURPLE -> 0xFFCC6699;
             case GOLD_BLACK -> 0xFFFFCC00;
+            case CUSTOM_GRADIENT -> 0xFFCC88FF;
         };
     }
 
@@ -73,6 +77,7 @@ public enum ChromaType {
             case RED_BLACK -> 0xFF6666;
             case DARK_RED_PURPLE -> 0xCC6699;
             case GOLD_BLACK -> 0xFFCC00;
+            case CUSTOM_GRADIENT -> 0xCC88FF;
         };
     }
 
@@ -88,6 +93,7 @@ public enum ChromaType {
             case RED_BLACK -> 0x50552222;
             case DARK_RED_PURPLE -> 0x50220022;
             case GOLD_BLACK -> 0x50554400;
+            case CUSTOM_GRADIENT -> 0x50220044;
         };
     }
 
@@ -103,6 +109,7 @@ public enum ChromaType {
             case RED_BLACK -> 0x80FF5555;
             case DARK_RED_PURPLE -> 0x80CC6699;
             case GOLD_BLACK -> 0x80FFCC00;
+            case CUSTOM_GRADIENT -> 0x80CC88FF;
         };
     }
 
@@ -118,6 +125,7 @@ public enum ChromaType {
             case RED_BLACK -> 0xFFFF5555;
             case DARK_RED_PURPLE -> 0xFFCC6699;
             case GOLD_BLACK -> 0xFFFFCC00;
+            case CUSTOM_GRADIENT -> 0xFFCC88FF;
         };
     }
 
@@ -133,6 +141,7 @@ public enum ChromaType {
             case RED_BLACK -> 0x50221111;
             case DARK_RED_PURPLE -> 0x50220022;
             case GOLD_BLACK -> 0x50221100;
+            case CUSTOM_GRADIENT -> 0x50220033;
         };
     }
 
@@ -148,6 +157,7 @@ public enum ChromaType {
             case RED_BLACK -> 0xFF5555;
             case DARK_RED_PURPLE -> 0xAA00AA;
             case GOLD_BLACK -> 0xFFCC00;
+            case CUSTOM_GRADIENT -> 0xCC88FF;
         };
     }
 

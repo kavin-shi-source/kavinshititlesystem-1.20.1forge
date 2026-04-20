@@ -4,6 +4,7 @@ import com.kavinshi.playertitle.client.ClientTitleData;
 import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.network.TitleUpdatePacket;
 import com.kavinshi.playertitle.title.ChromaType;
+import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.RainbowColorUtil;
 import com.kavinshi.playertitle.title.TitleColorUtil;
 import com.kavinshi.playertitle.title.TitleDefinition;
@@ -300,7 +301,12 @@ public class TitleScreen extends Screen {
             String playerName = minecraft.player.getGameProfile().getName();
             graphics.drawString(font, playerName, x + 11, infoY, 0xFF6B5533, false);
             infoY += 10;
-            if (equippedId >= 0) {
+            if (ClientTitleData.isUsingCustomTitle()) {
+                CustomTitleData ct = ClientTitleData.getCustomTitle();
+                String ctDisplay = "[" + ct.getText() + "]";
+                graphics.drawString(font, ctDisplay, x, infoY, 0xFF000000 | ct.getColor1(), false);
+                graphics.drawString(font, " (Custom)", x + font.width(ctDisplay) + 2, infoY, 0xFFCC88FF, false);
+            } else if (equippedId >= 0) {
                 TitleDefinition equipped = findTitle(equippedId);
                 if (equipped != null) {
                     MutableComponent eqText = equipped.hasChroma()
@@ -313,6 +319,33 @@ public class TitleScreen extends Screen {
             } else {
                 graphics.drawString(font, "None", x, infoY, 0xFFA58E68, false);
             }
+            infoY += 14;
+        }
+
+        CustomTitleData ct = ClientTitleData.getCustomTitle();
+        if (ct.hasPermission()) {
+            graphics.fill(x, infoY, x + width, infoY + 1, 0xFF504030);
+            infoY += 6;
+            graphics.drawString(font, "\u25b8 Custom Title:", x, infoY, 0xFFCC88FF, false);
+            infoY += 12;
+            graphics.drawString(font, "Permission: " + ct.getPermissionName(), x, infoY, 0xFF8B7B6B, false);
+            infoY += 11;
+            if (!ct.getText().isEmpty()) {
+                String ctText = "[" + ct.getText() + "]";
+                graphics.drawString(font, ctText, x, infoY, 0xFF000000 | ct.getColor1(), false);
+                infoY += 11;
+            }
+            if (ct.getPermission() >= CustomTitleData.PERMISSION_GRADIENT) {
+                String c2Str = "Color2: #" + Integer.toHexString(ct.getColor2());
+                graphics.drawString(font, c2Str, x, infoY, 0xFF000000 | ct.getColor2(), false);
+                infoY += 11;
+            }
+            String statusStr = ct.isUsingCustomTitle() ? "\u2714 Active" : "\u2718 Inactive";
+            graphics.drawString(font, statusStr, x, infoY, ct.isUsingCustomTitle() ? 0xFF55AA33 : 0xFFA58E68, false);
+            infoY += 11;
+            graphics.drawString(font, "Use /playertitle commands", x, infoY, 0xFF706050, false);
+            infoY += 10;
+            graphics.drawString(font, "to configure", x, infoY, 0xFF706050, false);
         }
 
         detailContentHeight = infoY + detailScrollOffset - contentTopY + 12;

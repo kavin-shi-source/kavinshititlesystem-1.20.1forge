@@ -1,5 +1,6 @@
 package com.kavinshi.playertitle.client;
 
+import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.TitleDefinition;
 
 import java.util.*;
@@ -17,13 +18,18 @@ public final class ClientTitleData {
     private static int aliveMinutes = 0;
     private static List<TitleDefinition> titleRegistry = Collections.emptyList();
     private static final Map<UUID, EquippedTitleInfo> playerTitles = new ConcurrentHashMap<>();
+    private static CustomTitleData customTitle = new CustomTitleData();
 
     public static void updatePlayerData(int equippedId, Set<Integer> unlocked,
-                                         Map<String, Integer> kills, int alive) {
+                                         Map<String, Integer> kills, int alive,
+                                         CustomTitleData ct) {
         equippedTitleId = equippedId;
         unlockedTitles = unlocked;
         killCounts = kills;
         aliveMinutes = alive;
+        if (ct != null) {
+            customTitle = ct;
+        }
     }
 
     public static void addUnlockedTitle(int titleId) {
@@ -64,6 +70,13 @@ public final class ClientTitleData {
         }
     }
 
+    public static void updatePlayerCustomTitle(UUID playerId, CustomTitleData ct) {
+        if (ct != null && ct.isUsingCustomTitle() && ct.hasPermission()) {
+            playerTitles.put(playerId, new EquippedTitleInfo(-2, ct.getText(),
+                ct.getColor1(), ct.getEffectiveChromaType().name()));
+        }
+    }
+
     public static void clearAll() {
         equippedTitleId = -1;
         unlockedTitles = EMPTY_INT_SET;
@@ -71,6 +84,7 @@ public final class ClientTitleData {
         aliveMinutes = 0;
         titleRegistry = Collections.emptyList();
         playerTitles.clear();
+        customTitle = new CustomTitleData();
     }
 
     public static int getEquippedTitleId() { return equippedTitleId; }
@@ -80,6 +94,7 @@ public final class ClientTitleData {
     public static List<TitleDefinition> getTitleRegistry() { return titleRegistry; }
     public static Map<UUID, EquippedTitleInfo> getPlayerTitles() { return playerTitles; }
     public static EquippedTitleInfo getEquippedTitleForPlayer(UUID playerId) { return playerTitles.get(playerId); }
+    public static CustomTitleData getCustomTitle() { return customTitle; }
 
     public static TitleDefinition getEquippedTitleDefinition() {
         if (equippedTitleId < 0) return null;
@@ -87,6 +102,28 @@ public final class ClientTitleData {
             if (def.getId() == equippedTitleId) return def;
         }
         return null;
+    }
+
+    public static boolean isUsingCustomTitle() {
+        return customTitle.isUsingCustomTitle() && customTitle.hasPermission();
+    }
+
+    public static String getEffectiveTitleName() {
+        if (isUsingCustomTitle()) return customTitle.getText();
+        TitleDefinition def = getEquippedTitleDefinition();
+        return def != null ? def.getName() : "";
+    }
+
+    public static int getEffectiveTitleColor() {
+        if (isUsingCustomTitle()) return customTitle.getColor1();
+        TitleDefinition def = getEquippedTitleDefinition();
+        return def != null ? def.getColor() : 0xFFFFFF;
+    }
+
+    public static String getEffectiveChromaType() {
+        if (isUsingCustomTitle()) return customTitle.getEffectiveChromaType().name();
+        TitleDefinition def = getEquippedTitleDefinition();
+        return def != null ? def.getChromaType() : "NONE";
     }
 
     public static final class EquippedTitleInfo {
