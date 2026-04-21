@@ -10,6 +10,10 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.UUID;
 
+/**
+ * 标题更新网络数据包，用于在客户端和服务器之间同步标题状态变化。
+ * 支持多种更新类型：标题解锁、装备、撤销、击杀数更新和存活时间更新。
+ */
 public class TitleUpdatePacket extends AbstractPacket {
     private static final Logger LOGGER = LogManager.getLogger(TitleUpdatePacket.class);
 

@@ -1,5 +1,9 @@
 package com.kavinshi.playertitle.title;
 
+/**
+ * 标题增益效果类，表示称号提供的属性增益。
+ * 包含增益类型、数值和目标实体等信息。
+ */
 public final class TitleBuff {
     private final BuffType type;
     private final double value;
@@ -29,6 +33,9 @@ public final class TitleBuff {
         }
     }
 
+    /**
+     * 增益类型枚举，定义称号可提供的各种属性增益。
+     */
     public enum BuffType {
         ATTACK_DAMAGE, DAMAGE_MULTIPLIER, MAX_HEALTH, SPEED, ARMOR, ARMOR_TOUGHNESS, LUCK
     }

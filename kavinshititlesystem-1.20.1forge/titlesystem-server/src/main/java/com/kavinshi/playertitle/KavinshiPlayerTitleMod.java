@@ -4,6 +4,7 @@ import com.kavinshi.playertitle.bootstrap.RewriteBootstrap;
 import com.kavinshi.playertitle.config.TitleConfig;
 import com.kavinshi.playertitle.network.PacketHandlers;
 import com.kavinshi.playertitle.network.TitleUpdatePacket;
+import com.kavinshi.playertitle.network.CustomTitleUpdatePacket;
 import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.handler.BuffHandler;
 import com.kavinshi.playertitle.handler.TitleSyncHandler;
@@ -16,6 +17,10 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 @Mod("playertitleserver")
+/**
+ * 玩家标题系统服务器端主模块，负责初始化服务器端组件和配置。
+ * 注册配置、事件处理器和数据包处理器。
+ */
 public final class KavinshiPlayerTitleMod {
     public static final String MOD_ID = "playertitleserver";
     public static final Logger LOGGER = LogUtils.getLogger();
@@ -61,6 +66,61 @@ public final class KavinshiPlayerTitleMod {
             TitleSyncHandler.syncPlayerData(ctx.sender);
             TitleSyncHandler.syncAllEquippedTitlesToPlayer(ctx.sender);
             TitleSyncHandler.syncTitleRegistryToPlayer(ctx.sender);
+        });
+
+        PacketHandlers.registerCustomTitleUpdateHandler(ctx -> {
+            TitleCapability.get(ctx.sender).ifPresent(state -> {
+                var ct = state.getCustomTitle();
+                if (!ct.hasPermission()) {
+                    return;
+                }
+
+                switch (ctx.updateType) {
+                    case SET_TEXT -> {
+                        long cooldownMs = TitleConfig.SERVER.customTitleCooldownSeconds.get() * 1000L;
+                        if (!ct.canModify(cooldownMs)) {
+                            long remaining = ct.getRemainingCooldown(cooldownMs) / 1000L;
+                            return;
+                        }
+                        int maxLen = TitleConfig.SERVER.customTitleMaxLength.get();
+                        if (ctx.text.length() > maxLen) return;
+                        state.setCustomTitleText(ctx.text);
+                    }
+                    case SET_COLOR1 -> {
+                        long cooldownMs = TitleConfig.SERVER.customTitleCooldownSeconds.get() * 1000L;
+                        if (!ct.canModify(cooldownMs)) return;
+                        state.setCustomTitleColor1(ctx.color1);
+                    }
+                    case SET_COLOR2 -> {
+                        long cooldownMs = TitleConfig.SERVER.customTitleCooldownSeconds.get() * 1000L;
+                        if (!ct.canModify(cooldownMs)) return;
+                        if (ct.getPermission() >= com.kavinshi.playertitle.title.CustomTitleData.PERMISSION_GRADIENT) {
+                            state.setCustomTitleColor1(ctx.color1);
+                            state.setCustomTitleColor2(ctx.color2);
+                        }
+                    }
+                    case TOGGLE_USE -> {
+                        LOGGER.info("[TitleSystem] TOGGLE_USE received from {}: useCustom={}, currentText={}",
+                            ctx.sender.getGameProfile().getName(), ctx.useCustom, ct.getText());
+                        if (ctx.useCustom && ct.getText().isEmpty()) {
+                            LOGGER.info("[TitleSystem] Cannot enable custom title: text is empty");
+                            return;
+                        }
+                        state.setUsingCustomTitle(ctx.useCustom);
+                        if (ctx.useCustom) {
+                            int oldId = state.getEquippedTitleId();
+                            if (oldId >= 0) {
+                                BuffHandler.removeBuffs(ctx.sender, oldId);
+                                state.setEquippedTitleId(-1);
+                            }
+                        }
+                    }
+                }
+                TitleSyncHandler.syncPlayerData(ctx.sender);
+                if (ctx.updateType == CustomTitleUpdatePacket.UpdateType.TOGGLE_USE) {
+                    TitleSyncHandler.broadcastEquippedTitle(ctx.sender);
+                }
+            });
         });
     }
 }

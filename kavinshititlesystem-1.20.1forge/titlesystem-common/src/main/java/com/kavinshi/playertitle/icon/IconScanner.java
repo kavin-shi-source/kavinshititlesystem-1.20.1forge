@@ -1,5 +1,6 @@
 package com.kavinshi.playertitle.icon;
 
+import com.kavinshi.playertitle.config.TitleConfig;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.concurrent.Executors;
@@ -7,6 +8,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 图标扫描器，负责监控图标目录的变化并自动重新扫描图标。
+ * 使用文件系统WatchService监控目录变化，并定期执行扫描任务。
+ */
 public class IconScanner {
     private final IconManager iconManager;
     private final Path watchDirectory;
@@ -32,7 +37,8 @@ public class IconScanner {
                 return thread;
             });
             scheduler.execute(this::watchLoop);
-            scheduler.scheduleAtFixedRate(this::safeScan, 30, 30, TimeUnit.SECONDS);
+            int scanInterval = TitleConfig.SERVER.iconScanInterval.get();
+            scheduler.scheduleAtFixedRate(this::safeScan, scanInterval, scanInterval, TimeUnit.SECONDS);
         }
     }
 

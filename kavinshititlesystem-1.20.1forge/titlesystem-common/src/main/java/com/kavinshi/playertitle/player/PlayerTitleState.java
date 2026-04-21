@@ -52,6 +52,14 @@ public final class PlayerTitleState {
         return Map.copyOf(this.killCounts);
     }
 
+    public void setKillCounts(Map<String, Integer> newCounts) {
+        this.killCounts.clear();
+        for (var entry : newCounts.entrySet()) {
+            this.killCounts.put(entry.getKey().toLowerCase(), entry.getValue());
+        }
+        this.dirty = true;
+    }
+
     public void addKill(String entityId) {
         String key = entityId.toLowerCase();
         this.killCounts.merge(key, 1, Integer::sum);

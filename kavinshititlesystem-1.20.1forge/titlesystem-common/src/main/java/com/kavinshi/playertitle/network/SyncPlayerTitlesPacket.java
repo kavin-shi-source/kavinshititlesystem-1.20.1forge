@@ -9,6 +9,10 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.function.Supplier;
 
+/**
+ * 同步玩家标题数据包，用于在客户端和服务器之间同步玩家的完整标题状态。
+ * 包含玩家解锁的标题ID、装备的标题ID、击杀计数、存活时间和自定义标题数据。
+ */
 public class SyncPlayerTitlesPacket extends AbstractPacket {
     private static final Logger LOGGER = LogManager.getLogger(SyncPlayerTitlesPacket.class);
 

@@ -12,6 +12,10 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 同步标题注册表数据包，用于在客户端和服务器之间同步标题定义数据。
+ * 包含所有已注册标题的完整定义信息，包括条件、增益效果等。
+ */
 public class SyncTitleRegistryPacket extends AbstractPacket {
     private static final Logger LOGGER = LogManager.getLogger(SyncTitleRegistryPacket.class);
 

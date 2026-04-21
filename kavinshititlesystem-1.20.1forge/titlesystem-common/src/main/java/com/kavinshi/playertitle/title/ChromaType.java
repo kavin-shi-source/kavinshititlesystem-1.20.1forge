@@ -1,5 +1,9 @@
 package com.kavinshi.playertitle.title;
 
+/**
+ * 色彩类型枚举，定义称号名称的染色效果和稀有度等级。
+ * 每种色彩类型对应不同的视觉样式和稀有度。
+ */
 public enum ChromaType {
     NONE,
     WHITE_GRAY,

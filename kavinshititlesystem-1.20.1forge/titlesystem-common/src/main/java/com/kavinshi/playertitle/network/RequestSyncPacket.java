@@ -8,6 +8,10 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.UUID;
 
+/**
+ * 请求同步数据包，用于客户端向服务器请求同步标题数据。
+ * 可以请求完整同步或增量同步。
+ */
 public class RequestSyncPacket extends AbstractPacket {
     private static final Logger LOGGER = LogManager.getLogger(RequestSyncPacket.class);
 

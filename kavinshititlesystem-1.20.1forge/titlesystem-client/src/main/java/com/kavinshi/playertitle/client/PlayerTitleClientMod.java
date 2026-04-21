@@ -14,6 +14,10 @@ import org.slf4j.Logger;
 import java.util.UUID;
 
 @Mod("playertitleclient")
+/**
+ * 玩家标题系统客户端主模块，负责初始化客户端组件和数据同步。
+ * 注册网络数据包处理器和客户端事件监听器。
+ */
 public final class PlayerTitleClientMod {
     public static final String MOD_ID = "playertitleclient";
     public static final Logger LOGGER = LogUtils.getLogger();

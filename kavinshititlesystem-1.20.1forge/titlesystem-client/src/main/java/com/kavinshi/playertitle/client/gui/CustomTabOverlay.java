@@ -28,7 +28,18 @@ public final class CustomTabOverlay {
                         ModList.get().isLoaded("tabby") ||
                         ModList.get().isLoaded("vanillatweaks") ||
                         ModList.get().isLoaded("vt") ||
-                        ModList.get().isLoaded("essential");
+                        ModList.get().isLoaded("essential") ||
+                        ModList.get().isLoaded("velocity") ||
+                        ModList.get().isLoaded("velocitytab") ||
+                        ModList.get().isLoaded("vtab") ||
+                        ModList.get().isLoaded("vtabmod") ||
+                        ModList.get().isLoaded("fabrictab") ||
+                        ModList.get().isLoaded("playerlist") ||
+                        ModList.get().isLoaded("playerlistmod") ||
+                        ModList.get().isLoaded("tablist");
+            if (hasTabMod) {
+                System.out.println("[PlayerTitle] Tab plugin detected, using plugin's tab list");
+            }
         }
         return hasTabMod;
     }
@@ -87,15 +98,18 @@ public final class CustomTabOverlay {
             return a.getProfile().getName().compareToIgnoreCase(b.getProfile().getName());
         });
 
-        int colCount = Math.max(1, (sw - 20) / 140);
+        int colWidth = 140;
+        int maxListWidth = Math.min(320, sw * 2 / 3);
+        int colCount = Math.max(1, maxListWidth / colWidth);
+        int actualListWidth = colCount * colWidth;
         int rowsPerCol = 15;
         int entryH = 10;
-        int startX = 5;
+        int startX = (sw - actualListWidth) / 2;
         int startY = 4;
 
         int maxRows = Math.min(playerList.size(), rowsPerCol * colCount);
         int bgH = maxRows * entryH + 8;
-        graphics.fill(startX - 3, startY - 3, sw - startX + 3, startY + bgH, 0xC0000000);
+        graphics.fill(startX - 3, startY - 3, startX + actualListWidth + 3, startY + bgH, 0xC0000000);
 
         for (int i = 0; i < playerList.size(); i++) {
             PlayerInfo info = playerList.get(i);
@@ -103,7 +117,7 @@ public final class CustomTabOverlay {
             int row = i % rowsPerCol;
             if (col >= colCount) break;
 
-            int x = startX + col * 140;
+            int x = startX + col * colWidth;
             int y = startY + row * entryH;
 
             UUID playerUuid = info.getProfile().getId();

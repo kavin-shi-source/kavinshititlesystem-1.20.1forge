@@ -34,6 +34,8 @@ subprojects {
         options.encoding = 'UTF-8'
         options.addStringOption('charset', 'UTF-8')
         options.addStringOption('docencoding', 'UTF-8')
+        // 忽略缺少Javadoc注释的警告
+        options.addStringOption('Xdoclint:all,-missing', '-quiet')
     }
     
     // 测试配置

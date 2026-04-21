@@ -18,6 +18,7 @@ public final class PacketHandlers {
     private static Consumer<TitleUpdateClientContext> titleUpdateClientHandler;
     private static Consumer<TitleUpdateServerContext> titleUpdateServerHandler;
     private static Consumer<RequestSyncContext> requestSyncHandler;
+    private static Consumer<CustomTitleUpdateContext> customTitleUpdateHandler;
 
     public static void registerSyncPlayerTitlesHandler(Consumer<SyncPlayerTitlesContext> handler) {
         syncPlayerTitlesHandler = handler;
@@ -37,6 +38,10 @@ public final class PacketHandlers {
 
     public static void registerRequestSyncHandler(Consumer<RequestSyncContext> handler) {
         requestSyncHandler = handler;
+    }
+
+    public static void registerCustomTitleUpdateHandler(Consumer<CustomTitleUpdateContext> handler) {
+        customTitleUpdateHandler = handler;
     }
 
     static void handleSyncPlayerTitles(UUID playerId, Set<Integer> unlockedTitleIds,
@@ -71,6 +76,13 @@ public final class PacketHandlers {
     static void handleRequestSync(ServerPlayer sender, UUID playerId, boolean fullSync) {
         if (requestSyncHandler != null) {
             requestSyncHandler.accept(new RequestSyncContext(sender, playerId, fullSync));
+        }
+    }
+
+    static void handleCustomTitleUpdateServer(ServerPlayer sender, CustomTitleUpdatePacket.UpdateType updateType,
+                                              String text, int color1, int color2, boolean useCustom) {
+        if (customTitleUpdateHandler != null) {
+            customTitleUpdateHandler.accept(new CustomTitleUpdateContext(sender, updateType, text, color1, color2, useCustom));
         }
     }
 
@@ -143,6 +155,25 @@ public final class PacketHandlers {
             this.sender = sender;
             this.playerId = playerId;
             this.fullSync = fullSync;
+        }
+    }
+
+    public static final class CustomTitleUpdateContext {
+        public final ServerPlayer sender;
+        public final CustomTitleUpdatePacket.UpdateType updateType;
+        public final String text;
+        public final int color1;
+        public final int color2;
+        public final boolean useCustom;
+
+        public CustomTitleUpdateContext(ServerPlayer sender, CustomTitleUpdatePacket.UpdateType updateType,
+                                        String text, int color1, int color2, boolean useCustom) {
+            this.sender = sender;
+            this.updateType = updateType;
+            this.text = text;
+            this.color1 = color1;
+            this.color2 = color2;
+            this.useCustom = useCustom;
         }
     }
 }

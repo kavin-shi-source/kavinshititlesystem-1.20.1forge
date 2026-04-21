@@ -11,6 +11,10 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.function.Supplier;
 
+/**
+ * 网络处理器，负责初始化网络通道和注册所有数据包类型。
+ * 使用Minecraft Forge的SimpleChannel实现客户端-服务器通信。
+ */
 public class NetworkHandler {
     private static final Logger LOGGER = LogManager.getLogger(NetworkHandler.class);
     private static final String PROTOCOL_VERSION = "1.0.0";
@@ -75,6 +79,13 @@ public class NetworkHandler {
             SyncTitleRegistryPacket.class,
             SyncTitleRegistryPacket::encode,
             SyncTitleRegistryPacket::new,
+            (packet, ctxSupplier) -> handlePacket(packet, ctxSupplier, packet::handle)
+        );
+
+        CHANNEL.registerMessage(packetId++,
+            CustomTitleUpdatePacket.class,
+            CustomTitleUpdatePacket::encode,
+            CustomTitleUpdatePacket::new,
             (packet, ctxSupplier) -> handlePacket(packet, ctxSupplier, packet::handle)
         );
 

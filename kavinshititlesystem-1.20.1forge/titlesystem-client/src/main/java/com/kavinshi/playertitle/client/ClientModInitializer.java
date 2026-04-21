@@ -16,6 +16,7 @@ import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.resource.PathPackResources;
 import org.slf4j.Logger;
 import com.mojang.logging.LogUtils;
+import net.minecraft.network.chat.Component;
 
 /**
  * 客户端模组初始化器，负责注册图标字体资源包。
@@ -101,7 +102,7 @@ public class ClientModInitializer {
                 // 创建Pack实例
                 Pack pack = Pack.readMetaAndCreate(
                     packId,
-                    net.minecraft.network.chat.Component.literal("PlayerTitle Fonts"),
+                    Component.literal("PlayerTitle Fonts"),
                     true,
                     (path) -> packResources,
                     PackType.CLIENT_RESOURCES,

@@ -28,6 +28,10 @@ public final class TitleCapability {
             this.lazyData = LazyOptional.of(() -> this.data);
         }
 
+        public PlayerTitleState getData() {
+            return data;
+        }
+
         @Override
         public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
             if (cap == CAPABILITY) {

@@ -6,6 +6,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 本地事件总线实现，用于在单个JVM内处理集群同步事件。
+ * 提供事件发布、订阅、取消订阅功能，支持按事件类型订阅和全局订阅。
+ */
 public class LocalEventBus implements ClusterEventBus {
     private final Map<ClusterEventType, Set<EventListener>> listeners = new ConcurrentHashMap<>();
     private final Set<EventListener> globalListeners = new CopyOnWriteArraySet<>();
