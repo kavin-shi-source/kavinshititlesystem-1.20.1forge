@@ -151,9 +151,7 @@ public final class RewriteBootstrap {
             );
             case VELOCITY -> new VelocityEventBus(
                 config.getChannelName(),
-                config.getServerName(),
-                config.getVelocityHost(),
-                config.getVelocityPort()
+                config.getServerName()
             );
         };
     }

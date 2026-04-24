@@ -89,6 +89,13 @@ public class NetworkHandler {
             (packet, ctxSupplier) -> handlePacket(packet, ctxSupplier, packet::handle)
         );
 
+        CHANNEL.registerMessage(packetId++,
+            ClusterSyncPacket.class,
+            ClusterSyncPacket::encode,
+            ClusterSyncPacket::new,
+            (packet, ctxSupplier) -> handlePacket(packet, ctxSupplier, packet::handle)
+        );
+
         LOGGER.info("Registered {} packet types", packetId);
     }
 

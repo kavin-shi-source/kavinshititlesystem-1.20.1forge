@@ -2,12 +2,15 @@ package com.kavinshi.playertitle;
 
 import com.kavinshi.playertitle.bootstrap.RewriteBootstrap;
 import com.kavinshi.playertitle.config.TitleConfig;
+import com.kavinshi.playertitle.network.ClusterSyncPacket;
 import com.kavinshi.playertitle.network.PacketHandlers;
 import com.kavinshi.playertitle.network.TitleUpdatePacket;
 import com.kavinshi.playertitle.network.CustomTitleUpdatePacket;
 import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.handler.BuffHandler;
 import com.kavinshi.playertitle.handler.TitleSyncHandler;
+import com.kavinshi.playertitle.sync.ClusterMode;
+import com.kavinshi.playertitle.sync.VelocityEventBus;
 import com.mojang.logging.LogUtils;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -33,6 +36,9 @@ public final class KavinshiPlayerTitleMod {
         registerServerPacketHandlers();
 
         RewriteBootstrap.initialize();
+
+        registerClusterSyncHandler();
+
         LOGGER.info("Initializing PlayerTitle Server Module");
     }
 
@@ -122,5 +128,27 @@ public final class KavinshiPlayerTitleMod {
                 }
             });
         });
+    }
+
+    private void registerClusterSyncHandler() {
+        var config = RewriteBootstrap.getInstance().getClusterConfig();
+        if (config.getMode() != ClusterMode.VELOCITY) {
+            return;
+        }
+
+        var eventBus = RewriteBootstrap.getInstance().getEventBus();
+        if (!(eventBus instanceof VelocityEventBus velocityBus)) {
+            return;
+        }
+
+        PacketHandlers.registerClusterSyncHandler(ctx -> {
+            ClusterSyncPacket packet = new ClusterSyncPacket(
+                ctx.sourceServer, ctx.eventType, ctx.playerId,
+                ctx.revision, ctx.timestampMs, ctx.payload
+            );
+            velocityBus.onClusterSyncPacket(packet);
+        });
+
+        LOGGER.info("Registered cluster sync handler for Velocity mode");
     }
 }

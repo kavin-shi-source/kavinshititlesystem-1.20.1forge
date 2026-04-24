@@ -19,6 +19,11 @@ public final class PacketHandlers {
     private static Consumer<TitleUpdateServerContext> titleUpdateServerHandler;
     private static Consumer<RequestSyncContext> requestSyncHandler;
     private static Consumer<CustomTitleUpdateContext> customTitleUpdateHandler;
+    private static Consumer<ClusterSyncContext> clusterSyncHandler;
+
+    public static void registerClusterSyncHandler(Consumer<ClusterSyncContext> handler) {
+        clusterSyncHandler = handler;
+    }
 
     public static void registerSyncPlayerTitlesHandler(Consumer<SyncPlayerTitlesContext> handler) {
         syncPlayerTitlesHandler = handler;
@@ -155,6 +160,32 @@ public final class PacketHandlers {
             this.sender = sender;
             this.playerId = playerId;
             this.fullSync = fullSync;
+        }
+    }
+
+    static void handleClusterSync(String sourceServer, String eventType, UUID playerId,
+                                  long revision, long timestampMs, String payload) {
+        if (clusterSyncHandler != null) {
+            clusterSyncHandler.accept(new ClusterSyncContext(sourceServer, eventType, playerId, revision, timestampMs, payload));
+        }
+    }
+
+    public static final class ClusterSyncContext {
+        public final String sourceServer;
+        public final String eventType;
+        public final UUID playerId;
+        public final long revision;
+        public final long timestampMs;
+        public final String payload;
+
+        public ClusterSyncContext(String sourceServer, String eventType, UUID playerId,
+                                  long revision, long timestampMs, String payload) {
+            this.sourceServer = sourceServer;
+            this.eventType = eventType;
+            this.playerId = playerId;
+            this.revision = revision;
+            this.timestampMs = timestampMs;
+            this.payload = payload;
         }
     }
 

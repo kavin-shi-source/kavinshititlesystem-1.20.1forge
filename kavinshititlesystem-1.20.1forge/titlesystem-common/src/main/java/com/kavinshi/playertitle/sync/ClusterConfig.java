@@ -181,12 +181,18 @@ public class ClusterConfig {
     /**
      * 创建Velocity配置。
      */
-    public static ClusterConfig velocityConfig(String host, int port, String serverName) {
+    public static ClusterConfig velocityConfig(String serverName) {
         return builder()
             .mode(ClusterMode.VELOCITY)
-            .velocityHost(host)
-            .velocityPort(port)
             .serverName(serverName)
+            .build();
+    }
+
+    public static ClusterConfig velocityConfig(String serverName, String channelName) {
+        return builder()
+            .mode(ClusterMode.VELOCITY)
+            .serverName(serverName)
+            .channelName(channelName)
             .build();
     }
 }
