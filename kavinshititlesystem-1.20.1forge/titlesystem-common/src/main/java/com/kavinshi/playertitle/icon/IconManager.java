@@ -8,12 +8,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 图标管理器，负责扫描配置目录中的PNG图标并管理图标定义。
  * 支持动态加载和Unicode字符分配。
  */
 public class IconManager {
+    private static final Logger LOGGER = LoggerFactory.getLogger(IconManager.class);
     private final Path configDirectory;
     private final Map<String, IconDefinition> iconsById = new ConcurrentHashMap<>();
     private final Map<Character, IconDefinition> iconsByChar = new ConcurrentHashMap<>();
@@ -70,7 +73,7 @@ public class IconManager {
                     newIcons.put(iconId, icon);
                 } catch (IOException e) {
                     // 单个PNG文件解析失败，跳过继续处理其他文件
-                    System.err.println("Failed to parse PNG file: " + file + ", error: " + e.getMessage());
+                    LOGGER.warn("Failed to parse PNG file: {}, error: {}", file, e.getMessage());
                 }
             }
         }

@@ -52,6 +52,7 @@ public final class ParchmentRenderer {
         RenderSystem.disableBlend();
     }
 
+    @SuppressWarnings("null")
     private static void fillRect(Matrix4f matrix, int x1, int y1, int x2, int y2, int colorARGB) {
         float a = (float)(colorARGB >> 24 & 0xFF) / 255.0f;
         float r = (float)(colorARGB >> 16 & 0xFF) / 255.0f;

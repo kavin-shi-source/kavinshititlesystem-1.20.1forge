@@ -5,7 +5,6 @@ import net.minecraftforge.network.NetworkEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.time.Instant;
 import java.util.UUID;
 
 public class ClusterSyncPacket extends AbstractPacket {

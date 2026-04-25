@@ -16,20 +16,22 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.GL11;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Objects;
 
 /**
  * 标题系统主界面，显示玩家已解锁的称号列表和自定义标题设置。
  * 提供称号装备、自定义标题编辑和视觉预览功能。
  */
+@SuppressWarnings("null")
 public class TitleScreen extends Screen {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TitleScreen.class);
     private static final int GUI_WIDTH = 370;
     private static final int GUI_HEIGHT = 260;
     private static final int LIST_WIDTH = 175;
@@ -417,7 +419,6 @@ public class TitleScreen extends Screen {
         int innerX = panelX + 12;
         int innerY = panelY + 8;
         int innerWidth = panelWidth - 24;
-        int btnAreaWidth = 52;
 
         if (!ct.hasPermission()) {
             String noPermText = "Custom Title: No Permission";
@@ -661,7 +662,7 @@ public class TitleScreen extends Screen {
 
                 int toggleBtnY = editBtnY + btnH + 4;
                 if (mx >= btnX && mx < btnX + btnW && my >= toggleBtnY && my < toggleBtnY + btnH) {
-                    System.out.println("[TitleSystem] Toggle button clicked: currentUsing=" + ct.isUsingCustomTitle() + ", sending useCustom=" + !ct.isUsingCustomTitle());
+                    LOGGER.debug("Toggle button clicked: currentUsing={}, sending useCustom={}", ct.isUsingCustomTitle(), !ct.isUsingCustomTitle());
                     NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
                         CustomTitleUpdatePacket.UpdateType.TOGGLE_USE, !ct.isUsingCustomTitle()));
                     return true;

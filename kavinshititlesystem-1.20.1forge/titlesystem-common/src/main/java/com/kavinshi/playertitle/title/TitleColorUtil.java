@@ -5,6 +5,8 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 
+@SuppressWarnings("null")
+
 public final class TitleColorUtil {
     private TitleColorUtil() {}
 

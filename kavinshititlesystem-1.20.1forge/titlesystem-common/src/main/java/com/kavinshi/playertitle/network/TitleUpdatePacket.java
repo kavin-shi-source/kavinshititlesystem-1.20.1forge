@@ -2,11 +2,7 @@ package com.kavinshi.playertitle.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.UUID;
 
@@ -14,8 +10,8 @@ import java.util.UUID;
  * 标题更新网络数据包，用于在客户端和服务器之间同步标题状态变化。
  * 支持多种更新类型：标题解锁、装备、撤销、击杀数更新和存活时间更新。
  */
+@SuppressWarnings("null")
 public class TitleUpdatePacket extends AbstractPacket {
-    private static final Logger LOGGER = LogManager.getLogger(TitleUpdatePacket.class);
 
     public enum UpdateType {
         TITLE_UNLOCKED(0), TITLE_EQUIPPED(1), TITLE_REVOKED(2), KILL_COUNT_UPDATED(3), ALIVE_TIME_UPDATED(4);

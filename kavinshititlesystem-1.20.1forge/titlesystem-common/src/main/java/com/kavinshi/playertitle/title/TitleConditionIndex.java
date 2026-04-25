@@ -2,10 +2,8 @@ package com.kavinshi.playertitle.title;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -22,8 +20,7 @@ public final class TitleConditionIndex {
     // 按UUID分组的KILL_UUID条件
     private final Map<String, List<IndexEntry>> uuidKillIndex = new ConcurrentHashMap<>();
     
-    // 所有称号条目的映射
-    private final Map<Integer, IndexEntry> allEntries = new ConcurrentHashMap<>();
+    private final Map<Integer, List<IndexEntry>> allEntries = new ConcurrentHashMap<>();
     
     /**
      * 索引条目，包含称号定义和条件信息。
@@ -82,7 +79,7 @@ public final class TitleConditionIndex {
             for (int i = 0; i < conditions.size(); i++) {
                 TitleCondition condition = conditions.get(i);
                 IndexEntry entry = new IndexEntry(definition, condition, i);
-                allEntries.put(definition.getId(), entry);
+                allEntries.computeIfAbsent(definition.getId(), k -> new ArrayList<>()).add(entry);
                 
                 switch (condition.getType()) {
                     case KILL_ANY_HOSTILE:
@@ -169,7 +166,11 @@ public final class TitleConditionIndex {
      * @return 所有称号条目列表
      */
     public List<IndexEntry> getAllEntries() {
-        return new ArrayList<>(allEntries.values());
+        List<IndexEntry> result = new ArrayList<>();
+        for (List<IndexEntry> entries : allEntries.values()) {
+            result.addAll(entries);
+        }
+        return result;
     }
     
     /**
@@ -179,7 +180,7 @@ public final class TitleConditionIndex {
      */
     public Map<String, Integer> getStats() {
         Map<String, Integer> stats = new HashMap<>();
-        stats.put("total_entries", allEntries.size());
+        stats.put("total_entries", allEntries.values().stream().mapToInt(List::size).sum());
         stats.put("kill_any_hostile", typeIndex.getOrDefault(TitleConditionType.KILL_ANY_HOSTILE, List.of()).size());
         stats.put("survival_time", typeIndex.getOrDefault(TitleConditionType.SURVIVAL_TIME, List.of()).size());
         stats.put("bounty", typeIndex.getOrDefault(TitleConditionType.BOUNTY, List.of()).size());

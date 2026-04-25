@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+@SuppressWarnings("null")
+
 public final class PlayerTitleState {
     private final UUID playerId;
     private final Set<Integer> unlockedTitles = new HashSet<>();
@@ -63,6 +65,13 @@ public final class PlayerTitleState {
     public void addKill(String entityId) {
         String key = entityId.toLowerCase();
         this.killCounts.merge(key, 1, Integer::sum);
+        this.dirty = true;
+    }
+
+    public void addKillCount(String entityId, int count) {
+        if (count <= 0) return;
+        String key = entityId.toLowerCase();
+        this.killCounts.merge(key, count, Integer::sum);
         this.dirty = true;
     }
 

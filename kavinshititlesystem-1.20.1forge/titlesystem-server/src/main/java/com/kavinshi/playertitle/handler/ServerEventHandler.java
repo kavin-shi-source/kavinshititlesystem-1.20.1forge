@@ -20,18 +20,19 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.network.PacketDistributor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
-/**
- * 服务器事件处理器，负责处理玩家登录、死亡、Tick事件等服务器端事件。
- * 管理玩家标题数据的同步、进度检查和状态更新。
- */
 public final class ServerEventHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ServerEventHandler.class);
 
-    private static final Map<java.util.UUID, Integer> aliveTickMap = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> aliveTickMap = new ConcurrentHashMap<>();
+    private static final Map<UUID, CompoundTag> deathDataCache = new ConcurrentHashMap<>();
     private static long lastProgressCheckTick = 0;
     private static int currentPlayerIndex = 0;
 
@@ -50,6 +51,18 @@ public final class ServerEventHandler {
         }
     }
 
+    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
+    public static void onLivingDeath(LivingDeathEvent event) {
+        if (event.getEntity() instanceof Player player) {
+            TitleCapability.get(player).ifPresent(state -> {
+                CompoundTag nbt = new ForgePlayerTitleStateStore().write(state);
+                deathDataCache.put(player.getUUID(), nbt);
+                LOGGER.debug("Cached death data for player {} with {} unlocked titles",
+                    player.getUUID(), state.getUnlockedTitleIds().size());
+            });
+        }
+    }
+
     @SubscribeEvent
     public static void onServerTick(TickEvent.ServerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
@@ -57,7 +70,7 @@ public final class ServerEventHandler {
         long currentTick = event.getServer().getTickCount();
         int progressCheckInterval = TitleConfig.SERVER.progressCheckInterval.get();
         boolean framePacing = TitleConfig.SERVER.enableFramePacing.get();
-        
+
         if (currentTick - lastProgressCheckTick < progressCheckInterval) return;
 
         var players = event.getServer().getPlayerList().getPlayers();
@@ -67,11 +80,10 @@ public final class ServerEventHandler {
         }
 
         if (framePacing) {
-            // 分帧处理：每tick只处理一个玩家
             if (currentPlayerIndex >= players.size()) {
                 currentPlayerIndex = 0;
             }
-            
+
             ServerPlayer player = players.get(currentPlayerIndex);
             TitleCapability.get(player).ifPresent(state -> {
                 int startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> (int) currentTick);
@@ -83,13 +95,11 @@ public final class ServerEventHandler {
             });
 
             currentPlayerIndex++;
-            // 如果已经处理完所有玩家，更新检查时间
             if (currentPlayerIndex >= players.size()) {
                 lastProgressCheckTick = currentTick;
                 currentPlayerIndex = 0;
             }
         } else {
-            // 传统模式：一次性处理所有玩家
             for (ServerPlayer player : players) {
                 TitleCapability.get(player).ifPresent(state -> {
                     int startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> (int) currentTick);
@@ -107,24 +117,20 @@ public final class ServerEventHandler {
     @SubscribeEvent
     public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            java.util.UUID playerId = player.getUUID();
-            System.out.println("[TitleSystem] Player joined: " + playerId + " (" + player.getGameProfile().getName() + ")");
-            
+            UUID playerId = player.getUUID();
+            LOGGER.debug("Player joined: {} ({})", playerId, player.getGameProfile().getName());
+
             aliveTickMap.put(playerId, player.server.getTickCount());
             TitleCapability.get(player).ifPresent(state -> {
-                int unlockedCount = state.getUnlockedTitleIds().size();
-                int killEntries = state.getKillCounts().size();
-                int equippedId = state.getEquippedTitleId();
-                System.out.println("[TitleSystem] Player data loaded: " + unlockedCount + " unlocked titles, " + killEntries + " kill entries, equipped title: " + equippedId);
-                
+                LOGGER.debug("Player data loaded: {} unlocked titles, {} kill entries, equipped title: {}",
+                    state.getUnlockedTitleIds().size(), state.getKillCounts().size(), state.getEquippedTitleId());
                 syncPlayerData(player, state);
             });
-            
+
             if (!TitleCapability.get(player).isPresent()) {
-                System.err.println("[TitleSystem] ERROR: Player joined but TitleCapability is missing!");
+                LOGGER.error("Player joined but TitleCapability is missing for {}", playerId);
             }
-            
-            // Sync title registry and equipped titles to the player
+
             TitleSyncHandler.syncTitleRegistryToPlayer(player);
             TitleSyncHandler.syncAllEquippedTitlesToPlayer(player);
         }
@@ -132,35 +138,35 @@ public final class ServerEventHandler {
 
     @SubscribeEvent
     public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
-        java.util.UUID uuid = event.getEntity().getUUID();
+        UUID uuid = event.getEntity().getUUID();
         aliveTickMap.remove(uuid);
         deathDataCache.remove(uuid);
     }
-
-    private static final Map<java.util.UUID, CompoundTag> deathDataCache = new ConcurrentHashMap<>();
 
     @SubscribeEvent
     public static void onPlayerClone(PlayerEvent.Clone event) {
         if (!event.isWasDeath()) return;
 
-        java.util.UUID playerId = event.getOriginal().getUUID();
-        System.out.println("[TitleSystem] Player clone event for death: " + playerId);
+        UUID playerId = event.getOriginal().getUUID();
+        LOGGER.debug("Player clone event for death: {}", playerId);
 
         CompoundTag savedNbt = deathDataCache.remove(playerId);
         if (savedNbt == null) {
-            System.err.println("[TitleSystem] WARNING: No cached death data for player " + playerId);
+            LOGGER.warn("No cached death data for player {}, attempting to read from original capability", playerId);
+            TitleCapability.get(event.getOriginal()).ifPresent(oldState -> {
+                CompoundTag fallbackNbt = new ForgePlayerTitleStateStore().write(oldState);
+                copyTitleData(fallbackNbt, playerId, event);
+            });
             return;
         }
 
+        copyTitleData(savedNbt, playerId, event);
+    }
+
+    private static void copyTitleData(CompoundTag savedNbt, UUID playerId, PlayerEvent.Clone event) {
         PlayerTitleState oldState = new ForgePlayerTitleStateStore().read(playerId, savedNbt);
 
         TitleCapability.get(event.getEntity()).ifPresent(newState -> {
-            int oldUnlockedCount = oldState.getUnlockedTitleIds().size();
-            int oldKillEntries = oldState.getKillCounts().size();
-            int oldEquippedId = oldState.getEquippedTitleId();
-
-            System.out.println("[TitleSystem] Copying title data: " + oldUnlockedCount + " unlocked titles, " + oldKillEntries + " kill entries, equipped title: " + oldEquippedId);
-
             for (int titleId : oldState.getUnlockedTitleIds()) {
                 newState.unlockTitle(titleId);
             }
@@ -181,54 +187,23 @@ public final class ServerEventHandler {
             }
 
             newState.markClean();
-
-            int newUnlockedCount = newState.getUnlockedTitleIds().size();
-            int newKillEntries = newState.getKillCounts().size();
-            int newEquippedId = newState.getEquippedTitleId();
-
-            if (oldUnlockedCount != newUnlockedCount) {
-                System.err.println("[TitleSystem] ERROR: Unlocked title count mismatch! Old: " + oldUnlockedCount + ", New: " + newUnlockedCount);
-            } else {
-                System.out.println("[TitleSystem] Successfully copied " + newUnlockedCount + " unlocked titles");
-            }
-            if (oldKillEntries != newKillEntries) {
-                System.err.println("[TitleSystem] ERROR: Kill entries count mismatch! Old: " + oldKillEntries + ", New: " + newKillEntries);
-            }
-            if (oldEquippedId != newEquippedId) {
-                System.err.println("[TitleSystem] ERROR: Equipped title ID mismatch! Old: " + oldEquippedId + ", New: " + newEquippedId);
-            } else {
-                System.out.println("[TitleSystem] Successfully copied equipped title ID: " + newEquippedId);
-            }
+            LOGGER.debug("Copied title data for player {}: {} unlocked titles, equipped: {}",
+                playerId, newState.getUnlockedTitleIds().size(), newState.getEquippedTitleId());
         });
-    }
-
-    @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
-    public static void onLivingDeath(LivingDeathEvent event) {
-        if (event.getEntity() instanceof net.minecraft.world.entity.player.Player player) {
-            TitleCapability.get(player).ifPresent(state -> {
-                CompoundTag nbt = new ForgePlayerTitleStateStore().write(state);
-                deathDataCache.put(player.getUUID(), nbt);
-                System.out.println("[TitleSystem] Cached death data for player " + player.getUUID() + " with " + state.getUnlockedTitleIds().size() + " unlocked titles");
-            });
-        }
     }
 
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             aliveTickMap.put(player.getUUID(), player.server.getTickCount());
-            TitleCapability.get(player).ifPresent(state -> {
-                syncPlayerData(player, state);
-            });
+            TitleCapability.get(player).ifPresent(state -> syncPlayerData(player, state));
         }
     }
 
     @SubscribeEvent
     public static void onPlayerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            TitleCapability.get(player).ifPresent(state -> {
-                syncPlayerData(player, state);
-            });
+            TitleCapability.get(player).ifPresent(state -> syncPlayerData(player, state));
         }
     }
 

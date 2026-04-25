@@ -3,6 +3,7 @@ package com.kavinshi.playertitle.client.gui;
 import com.kavinshi.playertitle.client.ClientTitleData;
 import com.kavinshi.playertitle.title.ChromaType;
 import com.kavinshi.playertitle.title.CustomTitleData;
+import com.kavinshi.playertitle.util.TabModDetector;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.Font;
@@ -11,37 +12,17 @@ import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.ModList;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
+@SuppressWarnings("null")
 public final class CustomTabOverlay {
-    private static Boolean hasTabMod = null;
 
     private static boolean hasTabMod() {
-        if (hasTabMod == null) {
-            hasTabMod = ModList.get().isLoaded("tab") ||
-                        ModList.get().isLoaded("bettertab") ||
-                        ModList.get().isLoaded("tabby") ||
-                        ModList.get().isLoaded("vanillatweaks") ||
-                        ModList.get().isLoaded("vt") ||
-                        ModList.get().isLoaded("essential") ||
-                        ModList.get().isLoaded("velocity") ||
-                        ModList.get().isLoaded("velocitytab") ||
-                        ModList.get().isLoaded("vtab") ||
-                        ModList.get().isLoaded("vtabmod") ||
-                        ModList.get().isLoaded("fabrictab") ||
-                        ModList.get().isLoaded("playerlist") ||
-                        ModList.get().isLoaded("playerlistmod") ||
-                        ModList.get().isLoaded("tablist");
-            if (hasTabMod) {
-                System.out.println("[PlayerTitle] Tab plugin detected, using plugin's tab list");
-            }
-        }
-        return hasTabMod;
+        return TabModDetector.hasTabMod();
     }
 
     private static int getRarityTier(UUID playerId) {

@@ -11,6 +11,7 @@ import java.util.function.Supplier;
  * 网络包基类。
  * 所有网络包都应继承此类并实现序列化、反序列化和处理逻辑。
  */
+@SuppressWarnings("null")
 public abstract class AbstractPacket {
     private static final Logger LOGGER = LogManager.getLogger(AbstractPacket.class);
     

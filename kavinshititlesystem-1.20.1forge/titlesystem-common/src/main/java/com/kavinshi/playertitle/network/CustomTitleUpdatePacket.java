@@ -2,20 +2,13 @@ package com.kavinshi.playertitle.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.network.NetworkEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.util.UUID;
 
 /**
  * 自定义标题更新数据包，用于同步玩家自定义标题的更改。
  * 支持更新自定义标题的文本、颜色、启用状态等。
  */
 public class CustomTitleUpdatePacket extends AbstractPacket {
-    private static final Logger LOGGER = LogManager.getLogger(CustomTitleUpdatePacket.class);
 
     public enum UpdateType {
         SET_TEXT(0), SET_COLOR1(1), SET_COLOR2(2), TOGGLE_USE(3);
@@ -63,14 +56,6 @@ public class CustomTitleUpdatePacket extends AbstractPacket {
         this.text = "";
         this.color1 = 0;
         this.color2 = 0;
-        this.useCustom = useCustom;
-    }
-
-    private CustomTitleUpdatePacket(UpdateType updateType, String text, int color1, int color2, boolean useCustom) {
-        this.updateType = updateType;
-        this.text = text != null ? text : "";
-        this.color1 = color1;
-        this.color2 = color2;
         this.useCustom = useCustom;
     }
 

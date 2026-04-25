@@ -1,6 +1,5 @@
 package com.kavinshi.playertitle.sync;
 
-import com.kavinshi.playertitle.title.TitleDefinition;
 import java.time.Instant;
 import java.util.UUID;
 

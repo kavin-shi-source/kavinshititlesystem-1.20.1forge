@@ -1,11 +1,11 @@
 package com.kavinshi.playertitle.client.gui;
 
-import com.kavinshi.playertitle.client.ClientTitleData;
 import com.kavinshi.playertitle.title.ChromaType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.sounds.SoundEvents;
 
+@SuppressWarnings("null")
 @net.minecraftforge.fml.common.Mod.EventBusSubscriber(
     bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE,
     value = net.minecraftforge.api.distmarker.Dist.CLIENT

@@ -12,11 +12,9 @@ import com.kavinshi.playertitle.handler.TitleSyncHandler;
 import com.kavinshi.playertitle.sync.ClusterMode;
 import com.kavinshi.playertitle.sync.VelocityEventBus;
 import com.mojang.logging.LogUtils;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.slf4j.Logger;
 
 @Mod("playertitleserver")
@@ -28,9 +26,8 @@ public final class KavinshiPlayerTitleMod {
     public static final String MOD_ID = "playertitleserver";
     public static final Logger LOGGER = LogUtils.getLogger();
 
+    @SuppressWarnings("removal")
     public KavinshiPlayerTitleMod() {
-        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
-
         ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER, TitleConfig.SERVER_SPEC);
 
         registerServerPacketHandlers();
@@ -85,7 +82,6 @@ public final class KavinshiPlayerTitleMod {
                     case SET_TEXT -> {
                         long cooldownMs = TitleConfig.SERVER.customTitleCooldownSeconds.get() * 1000L;
                         if (!ct.canModify(cooldownMs)) {
-                            long remaining = ct.getRemainingCooldown(cooldownMs) / 1000L;
                             return;
                         }
                         int maxLen = TitleConfig.SERVER.customTitleMaxLength.get();

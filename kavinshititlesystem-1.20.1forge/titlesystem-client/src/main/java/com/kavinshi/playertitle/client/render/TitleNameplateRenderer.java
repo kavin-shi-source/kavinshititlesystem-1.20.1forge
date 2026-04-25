@@ -17,6 +17,7 @@ import net.minecraftforge.eventbus.api.Event;
     bus = net.minecraftforge.fml.common.Mod.EventBusSubscriber.Bus.FORGE,
     value = net.minecraftforge.api.distmarker.Dist.CLIENT
 )
+@SuppressWarnings("null")
 public final class TitleNameplateRenderer {
 
     @net.minecraftforge.eventbus.api.SubscribeEvent

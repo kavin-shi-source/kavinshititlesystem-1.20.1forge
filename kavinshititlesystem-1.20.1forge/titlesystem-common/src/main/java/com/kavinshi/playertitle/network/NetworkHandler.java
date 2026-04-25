@@ -1,7 +1,6 @@
 package com.kavinshi.playertitle.network;
 
 import com.kavinshi.playertitle.ModConstants;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;

@@ -1,6 +1,9 @@
 package com.kavinshi.playertitle.icon;
 
 import com.kavinshi.playertitle.config.TitleConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.concurrent.Executors;
@@ -13,6 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 使用文件系统WatchService监控目录变化，并定期执行扫描任务。
  */
 public class IconScanner {
+    private static final Logger LOGGER = LoggerFactory.getLogger(IconScanner.class);
     private final IconManager iconManager;
     private final Path watchDirectory;
     private final AtomicBoolean isWatching = new AtomicBoolean(false);
@@ -59,7 +63,7 @@ public class IconScanner {
                 try {
                     watchService.close();
                 } catch (IOException e) {
-                    System.err.println("Failed to close watch service: " + e.getMessage());
+                    LOGGER.warn("Failed to close watch service: {}", e.getMessage());
                 }
             }
         }
@@ -91,7 +95,7 @@ public class IconScanner {
             Thread.currentThread().interrupt();
         } catch (ClosedWatchServiceException e) {
         } catch (Exception e) {
-            System.err.println("IconScanner watch loop error: " + e.getMessage());
+            LOGGER.error("IconScanner watch loop error: {}", e.getMessage());
         }
     }
 
@@ -99,7 +103,7 @@ public class IconScanner {
         try {
             iconManager.scanIcons();
         } catch (IOException e) {
-            System.err.println("Icon scan failed: " + e.getMessage());
+            LOGGER.error("Icon scan failed: {}", e.getMessage());
         }
     }
 

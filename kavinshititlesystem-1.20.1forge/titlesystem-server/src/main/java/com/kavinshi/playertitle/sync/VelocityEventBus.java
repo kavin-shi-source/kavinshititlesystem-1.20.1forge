@@ -6,15 +6,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class VelocityEventBus implements ClusterEventBus {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(VelocityEventBus.class);
 
     private final Map<ClusterEventType, Set<EventListener>> listeners = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -48,20 +51,20 @@ public class VelocityEventBus implements ClusterEventBus {
 
             var server = ServerLifecycleHooks.getCurrentServer();
             if (server == null) {
-                System.err.println("[VelocityEventBus] Cannot publish - server instance is null");
+                LOGGER.warn("Cannot publish - server instance is null");
                 return;
             }
 
             var playerList = server.getPlayerList().getPlayers();
             if (playerList.isEmpty()) {
-                System.err.println("[VelocityEventBus] Cannot publish - no online players to carry the message");
+                LOGGER.warn("Cannot publish - no online players to carry the message");
                 return;
             }
 
             ServerPlayer carrier = playerList.get(0);
             NetworkHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> carrier), packet);
 
-            System.out.println("[VelocityEventBus] Published " + event.getEventType() + " via player " + carrier.getName().getString());
+            LOGGER.debug("Published {} via player {}", event.getEventType(), carrier.getName().getString());
         } catch (Exception e) {
             throw new EventBusException("Failed to publish event via Velocity plugin message", e);
         }
@@ -81,7 +84,7 @@ public class VelocityEventBus implements ClusterEventBus {
 
             ClusterSyncEvent event = deserializeEvent(eventType, packet.getPayload());
             if (event == null) {
-                System.err.println("[VelocityEventBus] Failed to deserialize event payload");
+                LOGGER.warn("Failed to deserialize event payload");
                 return;
             }
 
@@ -91,7 +94,7 @@ public class VelocityEventBus implements ClusterEventBus {
                     try {
                         listener.onEvent(event);
                     } catch (Exception e) {
-                        System.err.println("[VelocityEventBus] Error in listener: " + e.getMessage());
+                        LOGGER.error("Error in listener: {}", e.getMessage());
                     }
                 }
             }
@@ -102,14 +105,14 @@ public class VelocityEventBus implements ClusterEventBus {
                     try {
                         listener.onEvent(event);
                     } catch (Exception e) {
-                        System.err.println("[VelocityEventBus] Error in global listener: " + e.getMessage());
+                        LOGGER.error("Error in global listener: {}", e.getMessage());
                     }
                 }
             }
 
-            System.out.println("[VelocityEventBus] Processed " + eventType + " from " + packet.getSourceServer());
+            LOGGER.debug("Processed {} from {}", eventType, packet.getSourceServer());
         } catch (IllegalArgumentException e) {
-            System.err.println("[VelocityEventBus] Unknown event type: " + packet.getEventType());
+            LOGGER.warn("Unknown event type: {}", packet.getEventType());
         }
     }
 
@@ -121,10 +124,10 @@ public class VelocityEventBus implements ClusterEventBus {
                 case TITLE_UPDATED -> objectMapper.readValue(payload, TitleUpdatedEvent.class);
                 case TITLE_PROGRESS_UPDATED -> objectMapper.readValue(payload, TitleProgressUpdatedEvent.class);
                 case TITLE_EQUIP_STATE_CHANGED -> objectMapper.readValue(payload, TitleEquipStateChangedEvent.class);
-                case SERVER_ANNOUNCEMENT -> null;
+                case SERVER_ANNOUNCEMENT -> objectMapper.readValue(payload, ServerAnnouncementEvent.class);
             };
         } catch (Exception e) {
-            System.err.println("[VelocityEventBus] Deserialization error: " + e.getMessage());
+            LOGGER.error("Deserialization error: {}", e.getMessage());
             return null;
         }
     }
@@ -165,7 +168,7 @@ public class VelocityEventBus implements ClusterEventBus {
     @Override
     public void start() throws EventBusException {
         if (running.compareAndSet(false, true)) {
-            System.out.println("[VelocityEventBus] Started - serverName=" + serverName + ", channel=" + channelName);
+            LOGGER.info("Started - serverName={}, channel={}", serverName, channelName);
         }
     }
 
@@ -173,7 +176,7 @@ public class VelocityEventBus implements ClusterEventBus {
     public void stop() throws EventBusException {
         if (running.compareAndSet(true, false)) {
             listeners.clear();
-            System.out.println("[VelocityEventBus] Stopped");
+            LOGGER.info("Stopped");
         }
     }
 

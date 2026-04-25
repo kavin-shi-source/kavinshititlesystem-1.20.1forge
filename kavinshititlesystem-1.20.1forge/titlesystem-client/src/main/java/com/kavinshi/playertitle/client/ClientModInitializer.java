@@ -1,6 +1,5 @@
 package com.kavinshi.playertitle.client;
 
-import com.kavinshi.playertitle.ModConstants;
 import java.nio.file.Path;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.repository.Pack;
@@ -9,7 +8,6 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.event.AddPackFindersEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.loading.FMLLoader;
@@ -78,6 +76,7 @@ public class ClientModInitializer {
      * 这将使资源包在游戏资源包列表中可用。
      */
     @SubscribeEvent
+    @SuppressWarnings("null")
     public static void onAddPackFinders(AddPackFindersEvent event) {
         if (event.getPackType() == PackType.CLIENT_RESOURCES) {
             LOGGER.info("Adding PlayerTitle font resource pack to pack finders");

@@ -11,20 +11,11 @@ import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.Jedis;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.kavinshi.playertitle.sync.TitleAssignedEvent;
-import com.kavinshi.playertitle.sync.TitleRemovedEvent;
-import com.kavinshi.playertitle.sync.TitleUpdatedEvent;
-import com.kavinshi.playertitle.sync.TitleProgressUpdatedEvent;
-import com.kavinshi.playertitle.sync.TitleEquipStateChangedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Redis事件总线实现，用于跨服事件同步。
- * 使用Redis Pub/Sub进行事件分发，支持多个服务器之间的实时同步。
- * 
- * 注意：需要添加Redis客户端依赖（如Jedis或Lettuce）到build.gradle：
- * implementation 'redis.clients:jedis:5.0.0'
- */
 public class RedisEventBus implements ClusterEventBus {
+    private static final Logger LOGGER = LoggerFactory.getLogger(RedisEventBus.class);
     private final String redisHost;
     private final int redisPort;
     private final String redisPassword;
@@ -85,7 +76,7 @@ public class RedisEventBus implements ClusterEventBus {
             String channel = getChannelName(event.getEventType());
             String message = serializeEvent(event);
             
-            System.out.println("[RedisEventBus] Publishing event to channel " + channel + ": " + event);
+            LOGGER.debug("Publishing event to channel {}: {}", channel, event);
             try (Jedis jedis = jedisPool.getResource()) {
                 jedis.publish(channel, message);
             }
@@ -106,7 +97,7 @@ public class RedisEventBus implements ClusterEventBus {
         }
         
         listeners.computeIfAbsent(eventType, k -> new CopyOnWriteArraySet<>()).add(listener);
-        System.out.println("[RedisEventBus] Subscribed listener to event type: " + eventType);
+        LOGGER.debug("Subscribed listener to event type: {}", eventType);
         
         // TODO: 如果这是该事件类型的第一个监听器，可能需要订阅Redis频道
     }
@@ -118,7 +109,7 @@ public class RedisEventBus implements ClusterEventBus {
         }
         
         listeners.computeIfAbsent(null, k -> new CopyOnWriteArraySet<>()).add(listener);
-        System.out.println("[RedisEventBus] Subscribed listener to all event types");
+        LOGGER.debug("Subscribed listener to all event types");
     }
     
     @Override
@@ -134,7 +125,7 @@ public class RedisEventBus implements ClusterEventBus {
                 listeners.remove(eventType);
                 // TODO: 如果这是该事件类型的最后一个监听器，可能需要取消订阅Redis频道
             }
-            System.out.println("[RedisEventBus] Unsubscribed listener from event type: " + eventType);
+            LOGGER.debug("Unsubscribed listener from event type: {}", eventType);
         }
     }
     
@@ -151,7 +142,7 @@ public class RedisEventBus implements ClusterEventBus {
                 listeners.remove(entry.getKey());
             }
         }
-        System.out.println("[RedisEventBus] Unsubscribed listener from all event types");
+        LOGGER.debug("Unsubscribed listener from all event types");
     }
     
     @Override
@@ -180,12 +171,12 @@ public class RedisEventBus implements ClusterEventBus {
                     
                     @Override
                     public void onSubscribe(String channel, int subscribedChannels) {
-                        System.out.println("[RedisEventBus] Subscribed to channel: " + channel);
+                        LOGGER.info("Subscribed to channel: {}", channel);
                     }
                     
                     @Override
                     public void onUnsubscribe(String channel, int subscribedChannels) {
-                        System.out.println("[RedisEventBus] Unsubscribed from channel: " + channel);
+                        LOGGER.info("Unsubscribed from channel: {}", channel);
                     }
                 };
                 
@@ -195,8 +186,7 @@ public class RedisEventBus implements ClusterEventBus {
                         jedis.subscribe(jedisPubSub, getAllChannels());
                     } catch (Exception e) {
                         if (running.get()) {
-                            System.err.println("[RedisEventBus] Redis subscription thread error: " + e.getMessage());
-                            e.printStackTrace();
+                            LOGGER.error("Redis subscription thread error: {}", e.getMessage(), e);
                         }
                     }
                 });
@@ -204,7 +194,7 @@ public class RedisEventBus implements ClusterEventBus {
                 listenerThread.setName("RedisEventBus-Listener");
                 listenerThread.start();
                 
-                System.out.println("[RedisEventBus] Started successfully - Redis host: " + redisHost + ":" + redisPort);
+                LOGGER.info("Started successfully - Redis host: {}:{}", redisHost, redisPort);
                 
             } catch (Exception e) {
                 running.set(false);
@@ -227,7 +217,7 @@ public class RedisEventBus implements ClusterEventBus {
                         listenerThread.join(5000);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
-                        System.err.println("[RedisEventBus] Interrupted while waiting for listener thread to stop");
+                        LOGGER.warn("Interrupted while waiting for listener thread to stop");
                     }
                 }
                 if (jedisPool != null) {
@@ -235,7 +225,7 @@ public class RedisEventBus implements ClusterEventBus {
                 }
                 
                 listeners.clear();
-                System.out.println("[RedisEventBus] Stopped");
+                LOGGER.info("Stopped");
                 
             } catch (Exception e) {
                 throw new EventBusException("Failed to stop Redis event bus", e);
@@ -285,7 +275,7 @@ public class RedisEventBus implements ClusterEventBus {
         try {
             return objectMapper.writeValueAsString(event);
         } catch (Exception e) {
-            System.err.println("[RedisEventBus] Failed to serialize event: " + e.getMessage());
+            LOGGER.error("Failed to serialize event: {}", e.getMessage());
             throw new RuntimeException("Failed to serialize event", e);
         }
     }
@@ -320,16 +310,15 @@ public class RedisEventBus implements ClusterEventBus {
                     targetClass = TitleEquipStateChangedEvent.class;
                     break;
                 case SERVER_ANNOUNCEMENT:
-                    // 服务器公告事件暂无具体实现，返回null
-                    System.err.println("[RedisEventBus] SERVER_ANNOUNCEMENT event type not implemented");
-                    return null;
+                    targetClass = ServerAnnouncementEvent.class;
+                    break;
                 default:
                     throw new IllegalArgumentException("Unsupported event type: " + eventType);
             }
             
             return objectMapper.readValue(json, targetClass);
         } catch (Exception e) {
-            System.err.println("[RedisEventBus] Failed to deserialize event from JSON: " + json + ", error: " + e.getMessage());
+            LOGGER.error("Failed to deserialize event from JSON: {}, error: {}", json, e.getMessage());
             return null;
         }
     }
@@ -344,11 +333,10 @@ public class RedisEventBus implements ClusterEventBus {
         try {
             ClusterSyncEvent event = deserializeEvent(message);
             if (event == null) {
-                System.err.println("[RedisEventBus] Failed to deserialize event from message: " + message);
+                LOGGER.warn("Failed to deserialize event from message: {}", message);
                 return;
             }
             
-            // 分发给监听器
             ClusterEventType eventType = event.getEventType();
             Set<EventListener> typeListeners = listeners.get(eventType);
             if (typeListeners != null) {
@@ -356,26 +344,24 @@ public class RedisEventBus implements ClusterEventBus {
                     try {
                         listener.onEvent(event);
                     } catch (Exception e) {
-                        System.err.println("[RedisEventBus] Error in listener for event " + event.getEventId() + ": " + e.getMessage());
+                        LOGGER.error("Error in listener for event {}: {}", event.getEventId(), e.getMessage());
                     }
                 }
             }
             
-            // 分发给全局监听器
             Set<EventListener> allListeners = listeners.get(null);
             if (allListeners != null) {
                 for (EventListener listener : allListeners) {
                     try {
                         listener.onEvent(event);
                     } catch (Exception e) {
-                        System.err.println("[RedisEventBus] Error in global listener for event " + event.getEventId() + ": " + e.getMessage());
+                        LOGGER.error("Error in global listener for event {}: {}", event.getEventId(), e.getMessage());
                     }
                 }
             }
             
         } catch (Exception e) {
-            System.err.println("[RedisEventBus] Error handling Redis message: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Error handling Redis message: {}", e.getMessage(), e);
         }
     }
     

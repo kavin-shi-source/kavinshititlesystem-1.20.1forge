@@ -1,13 +1,13 @@
 package com.kavinshi.playertitle.network;
 
+import com.kavinshi.playertitle.title.TitleAnimationProfile;
 import com.kavinshi.playertitle.title.TitleBuff;
 import com.kavinshi.playertitle.title.TitleCondition;
 import com.kavinshi.playertitle.title.TitleConditionType;
 import com.kavinshi.playertitle.title.TitleDefinition;
+import com.kavinshi.playertitle.title.TitleStyleMode;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,6 @@ import java.util.List;
  * 包含所有已注册标题的完整定义信息，包括条件、增益效果等。
  */
 public class SyncTitleRegistryPacket extends AbstractPacket {
-    private static final Logger LOGGER = LogManager.getLogger(SyncTitleRegistryPacket.class);
 
     private final List<TitleDefinition> titles;
 
@@ -57,6 +56,23 @@ public class SyncTitleRegistryPacket extends AbstractPacket {
         writeString(buffer, title.getIcon());
         writeString(buffer, title.getIconColor());
 
+        writeString(buffer, title.getStyleMode().name());
+
+        List<String> baseColors = title.getBaseColors();
+        buffer.writeVarInt(baseColors.size());
+        for (String color : baseColors) {
+            writeString(buffer, color);
+        }
+
+        TitleAnimationProfile anim = title.getAnimationProfile();
+        buffer.writeBoolean(anim != null);
+        if (anim != null) {
+            buffer.writeVarInt(anim.cycleMillis());
+            buffer.writeVarInt(anim.stepSize());
+        }
+
+        writeString(buffer, title.getAuraEffect() != null ? title.getAuraEffect() : "");
+
         List<TitleCondition> conditions = title.getConditions();
         buffer.writeVarInt(conditions.size());
         for (TitleCondition cond : conditions) {
@@ -85,6 +101,22 @@ public class SyncTitleRegistryPacket extends AbstractPacket {
         String icon = readString(buffer);
         String iconColor = readString(buffer);
 
+        TitleStyleMode styleMode = TitleStyleMode.valueOf(readString(buffer));
+
+        int baseColorCount = buffer.readVarInt();
+        List<String> baseColors = new ArrayList<>(baseColorCount);
+        for (int i = 0; i < baseColorCount; i++) {
+            baseColors.add(readString(buffer));
+        }
+
+        TitleAnimationProfile animationProfile = null;
+        if (buffer.readBoolean()) {
+            animationProfile = new TitleAnimationProfile(buffer.readVarInt(), buffer.readVarInt());
+        }
+
+        String auraEffect = readString(buffer);
+        if (auraEffect.isEmpty()) auraEffect = null;
+
         int condCount = buffer.readVarInt();
         List<TitleCondition> conditions = new ArrayList<>(condCount);
         for (int i = 0; i < condCount; i++) {
@@ -105,7 +137,7 @@ public class SyncTitleRegistryPacket extends AbstractPacket {
 
         return new TitleDefinition(id, name, displayOrder, color, chromaType, conditions,
             buffs, description, category, icon, iconColor,
-            com.kavinshi.playertitle.title.TitleStyleMode.PLAIN, List.of(), null, null);
+            styleMode, baseColors, animationProfile, auraEffect);
     }
 
     public List<TitleDefinition> getTitles() {

@@ -53,11 +53,7 @@ public final class TitleCapability {
             for (int titleId : restored.getUnlockedTitleIds()) {
                 data.unlockTitle(titleId);
             }
-            for (var entry : restored.getKillCounts().entrySet()) {
-                for (int i = 0; i < entry.getValue(); i++) {
-                    data.addKill(entry.getKey());
-                }
-            }
+            data.setKillCounts(restored.getKillCounts());
             data.setAliveMinutes(restored.getAliveMinutes());
             data.setEquippedTitleId(restored.getEquippedTitleId());
             data.setCustomTitlePermission(restored.getCustomTitle().getPermission());

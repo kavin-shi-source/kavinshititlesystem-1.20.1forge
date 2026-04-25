@@ -5,7 +5,6 @@ import com.kavinshi.playertitle.config.JsonTitleConfigRepository;
 import com.kavinshi.playertitle.config.TitleConfig;
 import com.kavinshi.playertitle.handler.BuffHandler;
 import com.kavinshi.playertitle.handler.TitleSyncHandler;
-import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.service.EquipResult;
 import com.kavinshi.playertitle.title.CustomTitleData;
@@ -30,6 +29,7 @@ import net.minecraftforge.fml.common.Mod;
 import java.nio.file.Path;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
+@SuppressWarnings("null")
 public final class TitleCommands {
 
     @SubscribeEvent

@@ -1,9 +1,12 @@
 package com.kavinshi.playertitle.player;
 
 import com.kavinshi.playertitle.title.CustomTitleData;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 import net.minecraft.nbt.CompoundTag;
 
+@SuppressWarnings("null")
 public final class ForgePlayerTitleStateStore {
     public CompoundTag write(PlayerTitleState state) {
         CompoundTag root = new CompoundTag();
@@ -37,13 +40,15 @@ public final class ForgePlayerTitleStateStore {
             state.unlockTitle(titleId);
         }
 
+        Map<String, Integer> killCounts = new HashMap<>();
         CompoundTag killCountsTag = tag.getCompound("killCounts");
         for (String key : killCountsTag.getAllKeys()) {
             int count = killCountsTag.getInt(key);
-            for (int i = 0; i < count; i++) {
-                state.addKill(key);
+            if (count > 0) {
+                killCounts.put(key, count);
             }
         }
+        state.setKillCounts(killCounts);
 
         state.setAliveMinutes(tag.getInt("aliveMinutes"));
         state.setEquippedTitleId(tag.getInt("equippedTitleId"));

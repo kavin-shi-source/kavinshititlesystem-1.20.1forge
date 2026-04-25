@@ -5,7 +5,6 @@ import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.network.SyncPlayerTitlesPacket;
 import com.kavinshi.playertitle.network.SyncTitleRegistryPacket;
 import com.kavinshi.playertitle.network.TitleUpdatePacket;
-import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.TitleDefinition;

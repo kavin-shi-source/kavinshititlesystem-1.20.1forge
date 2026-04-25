@@ -16,7 +16,7 @@ public final class CustomTitleData {
     public CustomTitleData() {}
 
     public CustomTitleData(String text, int permission, int color1, int color2, boolean usingCustomTitle, long lastModifiedTime) {
-        this.text = text != null ? text : "";
+        this.text = sanitize(text);
         this.permission = permission;
         this.color1 = color1;
         this.color2 = color2;
@@ -25,7 +25,7 @@ public final class CustomTitleData {
     }
 
     public String getText() { return text; }
-    public void setText(String text) { this.text = text != null ? text : ""; }
+    public void setText(String text) { this.text = sanitize(text); }
 
     public int getPermission() { return permission; }
     public void setPermission(int permission) { this.permission = Math.max(0, Math.min(3, permission)); }
@@ -76,5 +76,19 @@ public final class CustomTitleData {
         if (cooldownMs <= 0) return 0;
         long elapsed = System.currentTimeMillis() - lastModifiedTime;
         return Math.max(0, cooldownMs - elapsed);
+    }
+
+    private static String sanitize(String text) {
+        if (text == null) return "";
+        StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\u00A7') {
+                i++;
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 }

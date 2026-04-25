@@ -17,6 +17,7 @@ public final class ClientTitleData {
     private static Map<String, Integer> killCounts = EMPTY_STR_INT_MAP;
     private static int aliveMinutes = 0;
     private static List<TitleDefinition> titleRegistry = Collections.emptyList();
+    private static Map<Integer, TitleDefinition> titleById = Collections.emptyMap();
     private static final Map<UUID, EquippedTitleInfo> playerTitles = new ConcurrentHashMap<>();
     private static CustomTitleData customTitle = new CustomTitleData();
 
@@ -58,6 +59,11 @@ public final class ClientTitleData {
 
     public static void updateTitleRegistry(List<TitleDefinition> titles) {
         titleRegistry = titles;
+        Map<Integer, TitleDefinition> index = new HashMap<>(titles.size());
+        for (TitleDefinition def : titles) {
+            index.put(def.getId(), def);
+        }
+        titleById = index;
     }
 
     public static void updatePlayerEquippedTitle(UUID playerId, int titleId,
@@ -83,6 +89,7 @@ public final class ClientTitleData {
         killCounts = EMPTY_STR_INT_MAP;
         aliveMinutes = 0;
         titleRegistry = Collections.emptyList();
+        titleById = Collections.emptyMap();
         playerTitles.clear();
         customTitle = new CustomTitleData();
     }
@@ -96,12 +103,13 @@ public final class ClientTitleData {
     public static EquippedTitleInfo getEquippedTitleForPlayer(UUID playerId) { return playerTitles.get(playerId); }
     public static CustomTitleData getCustomTitle() { return customTitle; }
 
+    public static TitleDefinition getTitleById(int id) {
+        return titleById.get(id);
+    }
+
     public static TitleDefinition getEquippedTitleDefinition() {
         if (equippedTitleId < 0) return null;
-        for (TitleDefinition def : titleRegistry) {
-            if (def.getId() == equippedTitleId) return def;
-        }
-        return null;
+        return titleById.get(equippedTitleId);
     }
 
     public static boolean isUsingCustomTitle() {

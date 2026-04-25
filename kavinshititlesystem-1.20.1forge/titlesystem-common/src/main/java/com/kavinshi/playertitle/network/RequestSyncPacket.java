@@ -3,8 +3,6 @@ package com.kavinshi.playertitle.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.NetworkEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.UUID;
 
@@ -12,8 +10,8 @@ import java.util.UUID;
  * 请求同步数据包，用于客户端向服务器请求同步标题数据。
  * 可以请求完整同步或增量同步。
  */
+@SuppressWarnings("null")
 public class RequestSyncPacket extends AbstractPacket {
-    private static final Logger LOGGER = LogManager.getLogger(RequestSyncPacket.class);
 
     private final UUID playerId;
     private final boolean fullSync;

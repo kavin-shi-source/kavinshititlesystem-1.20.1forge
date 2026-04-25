@@ -1,15 +1,12 @@
 package com.kavinshi.playertitle.handler;
 
 import com.kavinshi.playertitle.bootstrap.RewriteBootstrap;
-import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.player.TitleCapability;
-import com.kavinshi.playertitle.title.CustomTitleData;
-import com.kavinshi.playertitle.title.TitleDefinition;
+import com.kavinshi.playertitle.title.TitleDisplayHelper;
 import com.kavinshi.playertitle.title.TitleRegistry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.TextColor;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntityType;
 import net.minecraftforge.event.ServerChatEvent;
@@ -17,30 +14,26 @@ import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
+
+@SuppressWarnings("null")
 public final class ChatHandler {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onServerChat(ServerChatEvent event) {
         ServerPlayer player = event.getPlayer();
+        TitleRegistry registry = RewriteBootstrap.getInstance().getTitleRegistry();
         TitleCapability.get(player).ifPresent(state -> {
-            MutableComponent titleComponent = null;
+            MutableComponent titleComponent = TitleDisplayHelper.buildTitleComponent(state, registry);
+            if (titleComponent == null) return;
 
-            CustomTitleData ct = state.getCustomTitle();
-            if (ct.isUsingCustomTitle() && ct.hasPermission()) {
-                titleComponent = createCustomTitleComponent(ct);
-            } else {
-                int titleId = state.getEquippedTitleId();
-                if (titleId < 0) return;
-                TitleRegistry registry = RewriteBootstrap.getInstance().getTitleRegistry();
-                TitleDefinition title = registry.getTitle(titleId);
-                if (title == null) return;
-                titleComponent = createTitleComponent(title);
-            }
-
+            Component rawDisplayName = player.getDisplayName();
+            if (rawDisplayName == null) rawDisplayName = Component.literal(player.getScoreboardName());
+            Component displayNameForHover = rawDisplayName;
             HoverEvent.EntityTooltipInfo entityInfo = new HoverEvent.EntityTooltipInfo(
-                EntityType.PLAYER, player.getUUID(), player.getDisplayName());
-            MutableComponent playerName = player.getDisplayName().copy()
+                EntityType.PLAYER, player.getUUID(), displayNameForHover);
+            MutableComponent playerName = rawDisplayName.copy()
                 .withStyle(style -> style.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_ENTITY, entityInfo)));
 
             MutableComponent newMessage = Component.literal("")
@@ -56,25 +49,5 @@ public final class ChatHandler {
                 target.sendSystemMessage(newMessage);
             }
         });
-    }
-
-    private static MutableComponent createTitleComponent(TitleDefinition title) {
-        String display = "[" + title.getName() + "]";
-        MutableComponent component = Component.literal(display);
-        int color = title.getColor();
-        if (color != 0xFFFFFF) {
-            component.withStyle(style -> style.withColor(TextColor.fromRgb(color & 0xFFFFFF)));
-        }
-        return component;
-    }
-
-    private static MutableComponent createCustomTitleComponent(CustomTitleData ct) {
-        String display = "[" + ct.getText() + "]";
-        MutableComponent component = Component.literal(display);
-        int color = ct.getColor1();
-        if (color != 0xFFFFFF) {
-            component.withStyle(style -> style.withColor(TextColor.fromRgb(color & 0xFFFFFF)));
-        }
-        return component;
     }
 }

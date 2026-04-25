@@ -4,6 +4,9 @@ import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.sync.ClusterEventBus;
 import com.kavinshi.playertitle.sync.TitleEventFactory;
 import com.kavinshi.playertitle.title.TitleRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Instant;
 
 /**
@@ -11,6 +14,7 @@ import java.time.Instant;
  * 发布装备状态变更事件到集群事件总线。
  */
 public final class TitleEquipService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TitleEquipService.class);
     private final TitleEventFactory eventFactory;
     private final ClusterEventBus eventBus;
     
@@ -54,8 +58,7 @@ public final class TitleEquipService {
             eventBus.publish(event);
         } catch (Exception e) {
             // 事件发布失败不应影响装备操作，但应记录日志
-            System.err.println("Failed to publish equip event: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Failed to publish equip event: {}", e.getMessage());
         }
         
         return new EquipResult(true, "EQUIPPED", titleId);
@@ -81,8 +84,7 @@ public final class TitleEquipService {
             eventBus.publish(event);
         } catch (Exception e) {
             // 事件发布失败不应影响卸下操作，但应记录日志
-            System.err.println("Failed to publish unequip event: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Failed to publish unequip event: {}", e.getMessage());
         }
         
         return new EquipResult(true, "UNEQUIPPED", -1);

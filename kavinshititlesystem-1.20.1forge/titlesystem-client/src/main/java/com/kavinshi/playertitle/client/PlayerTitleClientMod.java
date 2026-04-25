@@ -11,8 +11,6 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
 
-import java.util.UUID;
-
 @Mod("playertitleclient")
 /**
  * 玩家标题系统客户端主模块，负责初始化客户端组件和数据同步。
@@ -59,13 +57,14 @@ public final class PlayerTitleClientMod {
         });
     }
 
+    @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
     public static class ClientEvents {
         @SubscribeEvent
         public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-            if (Minecraft.getInstance().player != null) {
-                UUID playerId = Minecraft.getInstance().player.getUUID();
-                NetworkHandler.getChannel().sendToServer(new RequestSyncPacket(playerId, true));
-                LOGGER.debug("Sent sync request for player: {}", playerId);
+            var player = Minecraft.getInstance().player;
+            if (player != null) {
+                NetworkHandler.getChannel().sendToServer(new RequestSyncPacket(player.getUUID(), true));
+                LOGGER.debug("Sent sync request for player: {}", player.getUUID());
             }
         }
     }

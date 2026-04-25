@@ -3,18 +3,15 @@ package com.kavinshi.playertitle.network;
 import com.kavinshi.playertitle.title.CustomTitleData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 /**
  * 同步玩家标题数据包，用于在客户端和服务器之间同步玩家的完整标题状态。
  * 包含玩家解锁的标题ID、装备的标题ID、击杀计数、存活时间和自定义标题数据。
  */
+@SuppressWarnings("null")
 public class SyncPlayerTitlesPacket extends AbstractPacket {
-    private static final Logger LOGGER = LogManager.getLogger(SyncPlayerTitlesPacket.class);
 
     private final UUID playerId;
     private final Set<Integer> unlockedTitleIds;

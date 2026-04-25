@@ -5,12 +5,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 本地事件总线实现，用于在单个JVM内处理集群同步事件。
  * 提供事件发布、订阅、取消订阅功能，支持按事件类型订阅和全局订阅。
  */
 public class LocalEventBus implements ClusterEventBus {
+    private static final Logger LOGGER = LoggerFactory.getLogger(LocalEventBus.class);
     private final Map<ClusterEventType, Set<EventListener>> listeners = new ConcurrentHashMap<>();
     private final Set<EventListener> globalListeners = new CopyOnWriteArraySet<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -35,7 +38,7 @@ public class LocalEventBus implements ClusterEventBus {
                     try {
                         listener.onEvent(event);
                     } catch (Exception e) {
-                        System.err.println("Error in event listener for event " + event.getEventId() + ": " + e.getMessage());
+                        LOGGER.error("Error in event listener for event {}: {}", event.getEventId(), e.getMessage());
                     }
                 }
             }
@@ -45,7 +48,7 @@ public class LocalEventBus implements ClusterEventBus {
             try {
                 listener.onEvent(event);
             } catch (Exception e) {
-                System.err.println("Error in global event listener for event " + event.getEventId() + ": " + e.getMessage());
+                LOGGER.error("Error in global event listener for event {}: {}", event.getEventId(), e.getMessage());
             }
         }
     }
