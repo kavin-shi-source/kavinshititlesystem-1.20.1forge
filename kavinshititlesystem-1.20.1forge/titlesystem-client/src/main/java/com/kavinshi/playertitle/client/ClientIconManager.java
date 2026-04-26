@@ -11,8 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
-import javax.imageio.ImageIO;
+import java.nio.file.StandardCopyOption;
 import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 
 /**
  * 客户端图标管理器，扩展IconManager以支持字体资源包生成。
@@ -55,7 +56,7 @@ public class ClientIconManager extends IconManager {
         Path atlasPath = generateTextureAtlas(texturesDir);
         
         // 生成字体定义
-        generateFontDefinition(fontsDir, atlasPath);
+        generateFontDefinition(fontsDir);
         
         // 生成资源包meta文件
         generatePackMeta(outputDir);
@@ -81,7 +82,7 @@ public class ClientIconManager extends IconManager {
             // 复制PNG文件到纹理目录
             String textureName = icon.getId() + ".png";
             Path texturePath = texturesDir.resolve(textureName);
-            Files.copy(icon.getPngPath(), texturePath);
+            Files.copy(icon.getPngPath(), texturePath, StandardCopyOption.REPLACE_EXISTING);
             
             if (firstTexture == null) {
                 firstTexture = texturePath;
@@ -115,7 +116,7 @@ public class ClientIconManager extends IconManager {
      * @param atlasPath 图集文件路径
      * @throws IOException 如果生成失败
      */
-    private void generateFontDefinition(Path fontsDir, Path atlasPath) throws IOException {
+    private void generateFontDefinition(Path fontsDir) throws IOException {
         JsonObject root = new JsonObject();
         JsonArray providers = new JsonArray();
         

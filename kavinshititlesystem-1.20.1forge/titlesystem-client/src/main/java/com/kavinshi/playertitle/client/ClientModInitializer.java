@@ -13,7 +13,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.resource.PathPackResources;
 import org.slf4j.Logger;
-import com.mojang.logging.LogUtils;
+import org.slf4j.LoggerFactory;
 import net.minecraft.network.chat.Component;
 
 /**
@@ -23,9 +23,10 @@ import net.minecraft.network.chat.Component;
 @Mod.EventBusSubscriber(modid = "playertitleclient", bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 @OnlyIn(Dist.CLIENT)
 public class ClientModInitializer {
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private static ClientIconManager clientIconManager;
-    private static boolean initialized = false;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientModInitializer.class);
+    private static final Object INIT_LOCK = new Object();
+    private static volatile ClientIconManager clientIconManager;
+    private static volatile boolean initialized = false;
     
     /**
      * 初始化客户端图标管理器并生成资源包。
@@ -33,9 +34,17 @@ public class ClientModInitializer {
      */
     @SubscribeEvent
     public static void onClientSetup(FMLClientSetupEvent event) {
+        ensureInitialized();
+    }
+    
+    private static void ensureInitialized() {
         if (!initialized) {
-            initialize();
-            initialized = true;
+            synchronized (INIT_LOCK) {
+                if (!initialized) {
+                    initialize();
+                    initialized = true;
+                }
+            }
         }
     }
     
@@ -64,10 +73,7 @@ public class ClientModInitializer {
      * @return 客户端图标管理器
      */
     public static ClientIconManager getClientIconManager() {
-        if (!initialized) {
-            initialize();
-            initialized = true;
-        }
+        ensureInitialized();
         return clientIconManager;
     }
     

@@ -26,6 +26,8 @@ public final class JoinLeaveHandler {
             MutableComponent titleComp = TitleDisplayHelper.buildTitleComponent(state, registry);
             if (titleComp == null) return;
 
+            event.setCanceled(true);
+
             MutableComponent joinMessage = Component.literal("")
                     .append(titleComp)
                     .append(Component.literal(" "))

@@ -3,9 +3,7 @@ package com.kavinshi.playertitle.client.gui;
 import com.kavinshi.playertitle.client.ClientTitleData;
 import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.network.TitleUpdatePacket;
-import com.kavinshi.playertitle.network.CustomTitleUpdatePacket;
 import com.kavinshi.playertitle.title.ChromaType;
-import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.RainbowColorUtil;
 import com.kavinshi.playertitle.title.TitleColorUtil;
 import com.kavinshi.playertitle.title.TitleDefinition;
@@ -48,38 +46,22 @@ public class TitleScreen extends Screen {
     private int detailScrollOffset = 0;
     private int detailContentHeight = 0;
     private int detailVisibleHeight = 0;
-    private boolean editingCustomTitle = false;
-    private String customTitleEditText = "";
-    private int customTitleEditColor1 = 0xFFFFFF;
-    private int customTitleEditColor2 = 0xFFFFFF;
-    
-    // 颜色选择器相关变量
-    private static final int[] COLOR_PALETTE = {
-        0xFF0000, // 红
-        0x00FF00, // 绿
-        0x0000FF, // 蓝
-        0xFFFF00, // 黄
-        0xFF00FF, // 紫
-        0x00FFFF, // 青
-        0xFFA500, // 橙
-        0x800080, // 紫红
-        0x008000, // 深绿
-        0x000080, // 深蓝
-        0x808080, // 灰
-        0xC0C0C0, // 银
-        0xFFD700, // 金
-        0xFFFFFF, // 白
-        0x000000  // 黑
-    };
-    private static final int COLOR_SQUARE_SIZE = 14;
-    private static final int COLOR_SQUARE_MARGIN = 2;
-    private static final int COLORS_PER_ROW = 8;
-    private boolean selectingColor1 = false;
-    private boolean selectingColor2 = false;
-    private int colorPickerX = 0;
-    private int colorPickerY = 0;
-    private int colorPickerWidth = 0;
-    private int colorPickerHeight = 0;
+    private int listStartY;
+    private int pageY;
+    private int detailX;
+    private int detailWidth;
+    private int detailBottomLimit;
+    private int equipBtnY;
+
+    private static final int PARCHMENT_GOLD = 0xFFD4A017;
+    private static final int PARCHMENT_DARK_GOLD = 0xFFCCB06E;
+    private static final int PARCHMENT_BORDER = 0xFF8C7246;
+    private static final int PARCHMENT_FILL = 0xE0D8C890;
+    private static final int PARCHMENT_TEXT_DARK = 0xFF3B2F1E;
+    private static final int PARCHMENT_TEXT_MID = 0xFF6B5B3B;
+    private static final int PARCHMENT_TEXT_LIGHT = 0xFFA58E68;
+    private static final int PARCHMENT_HIGHLIGHT = 0x30FFFFFF;
+    private static final int PARCHMENT_SHADOW = 0x40000000;
 
     public TitleScreen() {
         super(Component.literal("Titles"));
@@ -96,10 +78,17 @@ public class TitleScreen extends Screen {
         guiTop = (height - GUI_HEIGHT) / 2;
         selectedTitleId = ClientTitleData.getEquippedTitleId();
         titlesPerPage = Math.max(4, (GUI_HEIGHT - 58 - CUSTOM_PANEL_HEIGHT) / ENTRY_HEIGHT);
+        listStartY = guiTop + 24 + 12;
+        pageY = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 18;
+        detailX = guiLeft + DIVIDER_X + 10;
+        detailWidth = GUI_WIDTH - DIVIDER_X - MARGIN - 10;
+        detailBottomLimit = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 4;
+        equipBtnY = detailBottomLimit - 18;
     }
 
     @Override
     public void render(@NotNull GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        com.kavinshi.playertitle.title.RainbowColorUtil.updateCachedTime();
         renderBackground(graphics);
         ParchmentRenderer.render(graphics.pose(), guiLeft - 8, guiTop - 8, GUI_WIDTH + 16, GUI_HEIGHT + 16, DIVIDER_X);
 
@@ -125,7 +114,7 @@ public class TitleScreen extends Screen {
         int startIndex = currentPage * titlesPerPage;
         int endIndex = Math.min(startIndex + titlesPerPage, allTitles.size());
         int listX = guiLeft + MARGIN;
-        int listY = guiTop + 24;
+        int listY = listStartY;
 
         String listLabel = "\u25c8 Titles";
         graphics.drawString(font, listLabel, listX, listY, 0xFF6B5B3B, false);
@@ -142,7 +131,6 @@ public class TitleScreen extends Screen {
                 isUnlocked, isSelected, isEquipped, hovered, font);
         }
 
-        int pageY = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 18;
         String pageText = "\u25c0 " + (currentPage + 1) + "/" + totalPages + " \u25b6";
         graphics.drawString(font, pageText, listX + (LIST_WIDTH - font.width(pageText)) / 2, pageY, 0xFF84847A, false);
         if (currentPage > 0) {
@@ -159,12 +147,8 @@ public class TitleScreen extends Screen {
         graphics.fill(divX - 1, guiTop + 22, divX + 2, guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 24, 0x40D4A017);
         graphics.fill(divX - 1, guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 24, divX + 2, guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 22, 0x40D4A017);
 
-        int detailX = divX + 10;
-        int detailWidth = GUI_WIDTH - DIVIDER_X - MARGIN - 10;
-        int detailBottomLimit = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 4;
+        int detailBottomLimit = this.detailBottomLimit;
         renderDetailPanel(graphics, detailX, guiTop + 24, detailWidth, detailBottomLimit, mouseX, mouseY, font, unlocked, equippedId);
-
-        renderCustomPanel(graphics, guiLeft, guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT, GUI_WIDTH, CUSTOM_PANEL_HEIGHT, mouseX, mouseY, font);
 
         super.render(graphics, mouseX, mouseY, partialTick);
     }
@@ -298,7 +282,8 @@ public class TitleScreen extends Screen {
         int sh = (int)(Math.max(1, detailVisibleHeight) * guiScale);
         GL11.glEnable(GL11.GL_SCISSOR_TEST);
         GL11.glScissor(sx, sy, sw, sh);
-
+        int maxScroll;
+        try {
         int infoY = contentTopY - detailScrollOffset;
 
         if (!title.getIcon().isEmpty()) {
@@ -351,12 +336,7 @@ public class TitleScreen extends Screen {
             String playerName = minecraft.player.getGameProfile().getName();
             graphics.drawString(font, playerName, x + 11, infoY, 0xFF6B5533, false);
             infoY += 10;
-            if (ClientTitleData.isUsingCustomTitle()) {
-                CustomTitleData ct = ClientTitleData.getCustomTitle();
-                String ctDisplay = "[" + ct.getText() + "]";
-                graphics.drawString(font, ctDisplay, x, infoY, 0xFF000000 | ct.getColor1(), false);
-                graphics.drawString(font, " (Custom)", x + font.width(ctDisplay) + 2, infoY, 0xFFCC88FF, false);
-            } else if (equippedId >= 0) {
+            if (equippedId >= 0) {
                 TitleDefinition equipped = findTitle(equippedId);
                 if (equipped != null) {
                     MutableComponent eqText = equipped.hasChroma()
@@ -373,9 +353,11 @@ public class TitleScreen extends Screen {
         }
 
         detailContentHeight = infoY + detailScrollOffset - contentTopY + 12;
-        int maxScroll = Math.max(0, detailContentHeight - detailVisibleHeight);
+        maxScroll = Math.max(0, detailContentHeight - detailVisibleHeight);
         if (detailScrollOffset > maxScroll) detailScrollOffset = maxScroll;
-        GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        } finally {
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+        }
 
         if (detailContentHeight > detailVisibleHeight) {
             if (detailScrollOffset > 0)
@@ -405,147 +387,6 @@ public class TitleScreen extends Screen {
             graphics.fill(btnX, btnY + btnHeight - 1, btnX + btnWidth, btnY + btnHeight, 0x40000000);
             String btnText = "\u2694 Equip Title";
             graphics.drawString(font, btnText, btnX + (btnWidth - font.width(btnText)) / 2, btnY + 4, 0xFFFFFFFF, false);
-        }
-    }
-
-    private void renderCustomPanel(GuiGraphics graphics, int panelX, int panelY, int panelWidth, int panelHeight,
-                                      int mouseX, int mouseY, Font font) {
-        CustomTitleData ct = ClientTitleData.getCustomTitle();
-
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + panelHeight, 0xE0302010);
-        graphics.fill(panelX, panelY, panelX + panelWidth, panelY + 2, 0xFFCC8844);
-        graphics.fill(panelX, panelY + panelHeight - 2, panelX + panelWidth, panelY + panelHeight, 0xFF996633);
-
-        int innerX = panelX + 12;
-        int innerY = panelY + 8;
-        int innerWidth = panelWidth - 24;
-
-        if (!ct.hasPermission()) {
-            String noPermText = "Custom Title: No Permission";
-            graphics.drawString(font, noPermText, innerX + (innerWidth - font.width(noPermText)) / 2, innerY + 12, 0xFF888888, false);
-            return;
-        }
-
-        if (!editingCustomTitle) {
-            String customLabel = "\u2728 Custom Title \u2728";
-            graphics.drawString(font, customLabel, innerX, innerY, 0xFFCC88FF, false);
-            innerY += 12;
-
-            String permStr = "Permission: " + ct.getPermissionName();
-            graphics.drawString(font, permStr, innerX, innerY, 0xFF8B7B6B, false);
-            innerY += 11;
-
-            if (!ct.getText().isEmpty()) {
-                String ctText = "[" + ct.getText() + "]";
-                int textCol = 0xFF000000 | ct.getColor1();
-                graphics.drawString(font, ctText, innerX, innerY, textCol, false);
-                if (ct.getPermission() >= CustomTitleData.PERMISSION_GRADIENT) {
-                    String arrow = " \u2192 ";
-                    graphics.drawString(font, arrow, innerX + font.width(ctText), innerY, 0xFF888888, false);
-                    String c2Hex = "#" + Integer.toHexString(ct.getColor2()).toUpperCase();
-                    graphics.drawString(font, c2Hex, innerX + font.width(ctText) + font.width(arrow), innerY, 0xFF000000 | ct.getColor2(), false);
-                }
-                innerY += 11;
-            } else {
-                graphics.drawString(font, "[Not Set]", innerX, innerY, 0xFFAAAAAA, false);
-                innerY += 11;
-            }
-
-            String statusStr = ct.isUsingCustomTitle() ? "\u2714 Active" : "\u2718 Inactive";
-            int statusColor = ct.isUsingCustomTitle() ? 0xFF55AA33 : 0xFFA58E68;
-            graphics.drawString(font, statusStr, innerX, innerY, statusColor, false);
-
-            int btnW = 46;
-            int btnH = 14;
-            int btnX = panelX + panelWidth - 12 - btnW;
-            int editBtnY = panelY + 10;
-            boolean editHovered = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= editBtnY && mouseY < editBtnY + btnH;
-            int editColor = editHovered ? 0xFFDD8833 : 0xFFCC7722;
-            graphics.fill(btnX - 1, editBtnY - 1, btnX + btnW + 1, editBtnY + btnH + 1, 0xFF994422);
-            graphics.fill(btnX, editBtnY, btnX + btnW, editBtnY + btnH, editColor);
-            graphics.fill(btnX, editBtnY, btnX + btnW, editBtnY + 1, 0x30FFFFFF);
-            graphics.fill(btnX, editBtnY + btnH - 1, btnX + btnW, editBtnY + btnH, 0x40000000);
-            String editText = "\u270E Edit";
-            graphics.drawString(font, editText, btnX + (btnW - font.width(editText)) / 2, editBtnY + 3, 0xFFFFFFFF, false);
-
-            int toggleBtnY = editBtnY + btnH + 4;
-            boolean toggleHovered = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= toggleBtnY && mouseY < toggleBtnY + btnH;
-            int toggleColor = toggleHovered ? (ct.isUsingCustomTitle() ? 0xFFCC6633 : 0xFFDD8833) : (ct.isUsingCustomTitle() ? 0xFFAA5522 : 0xFFCC7722);
-            graphics.fill(btnX - 1, toggleBtnY - 1, btnX + btnW + 1, toggleBtnY + btnH + 1, 0xFF994422);
-            graphics.fill(btnX, toggleBtnY, btnX + btnW, toggleBtnY + btnH, toggleColor);
-            graphics.fill(btnX, toggleBtnY, btnX + btnW, toggleBtnY + 1, 0x30FFFFFF);
-            graphics.fill(btnX, toggleBtnY + btnH - 1, btnX + btnW, toggleBtnY + btnH, 0x40000000);
-            String toggleText = ct.isUsingCustomTitle() ? "\u2718 Off" : "\u2714 On";
-            graphics.drawString(font, toggleText, btnX + (btnW - font.width(toggleText)) / 2, toggleBtnY + 3, 0xFFFFFFFF, false);
-        } else {
-            if (customTitleEditText.isEmpty()) {
-                customTitleEditText = ct.getText();
-            }
-            if (customTitleEditColor1 == 0xFFFFFF) {
-                customTitleEditColor1 = ct.getColor1();
-            }
-            if (customTitleEditColor2 == 0xFFFFFF) {
-                customTitleEditColor2 = ct.getColor2();
-            }
-
-            String editLabel = "\u270E Editing Custom Title";
-            graphics.drawString(font, editLabel, innerX, innerY, 0xFFD4A017, false);
-            innerY += 13;
-
-            int tfW = innerWidth - 80;
-            int tfH = 13;
-            int tfX = innerX;
-            int tfY = innerY;
-            graphics.fill(tfX - 1, tfY - 1, tfX + tfW + 1, tfY + tfH + 1, 0xFF505050);
-            graphics.fill(tfX, tfY, tfX + tfW, tfY + tfH, 0xFF202020);
-            String displayText = customTitleEditText + (System.currentTimeMillis() % 1000 < 500 ? "|" : "");
-            graphics.drawString(font, displayText, tfX + 2, tfY + 2, 0xFFFFFFFF, false);
-
-            int colorX = tfX + tfW + 10;
-            if (ct.getPermission() >= CustomTitleData.PERMISSION_GRADIENT) {
-                graphics.drawString(font, "C1:", colorX, innerY + 1, 0xFFD4A017, false);
-                renderColorSquare(graphics, colorX + 16, innerY, customTitleEditColor1, mouseX, mouseY);
-                graphics.drawString(font, "C2:", colorX, innerY + 12, 0xFFD4A017, false);
-                renderColorSquare(graphics, colorX + 16, innerY + 11, customTitleEditColor2, mouseX, mouseY);
-                if (selectingColor1 || selectingColor2) {
-                    renderColorPickerPanel(graphics, font, mouseX, mouseY, innerX, innerY + 25);
-                }
-            } else {
-                graphics.drawString(font, "Color:", colorX, innerY + 1, 0xFFD4A017, false);
-                renderColorSquare(graphics, colorX + 36, innerY, customTitleEditColor1, mouseX, mouseY);
-                if (selectingColor1) {
-                    renderColorPickerPanel(graphics, font, mouseX, mouseY, innerX, innerY + 25);
-                }
-            }
-
-            innerY += tfH + 6;
-
-            int saveBtnW = 50;
-            int cancelBtnW = 50;
-            int totalBtnW = saveBtnW + cancelBtnW + 6;
-            int startX = innerX + (innerWidth - totalBtnW) / 2;
-
-            int saveBtnX = startX;
-            int saveBtnY = innerY;
-            int saveBtnH = 14;
-            boolean saveHovered = mouseX >= saveBtnX && mouseX < saveBtnX + saveBtnW && mouseY >= saveBtnY && mouseY < saveBtnY + saveBtnH;
-            int saveColor = saveHovered ? 0xFF55AA33 : 0xFF44AA22;
-            graphics.fill(saveBtnX - 1, saveBtnY - 1, saveBtnX + saveBtnW + 1, saveBtnY + saveBtnH + 1, 0xFF994422);
-            graphics.fill(saveBtnX, saveBtnY, saveBtnX + saveBtnW, saveBtnY + saveBtnH, saveColor);
-            graphics.fill(saveBtnX, saveBtnY, saveBtnX + saveBtnW, saveBtnY + 1, 0x30FFFFFF);
-            graphics.fill(saveBtnX, saveBtnY + saveBtnH - 1, saveBtnX + saveBtnW, saveBtnY + saveBtnH, 0x40000000);
-            graphics.drawString(font, "Save", saveBtnX + (saveBtnW - font.width("Save")) / 2, saveBtnY + 3, 0xFFFFFFFF, false);
-
-            int cancelBtnX = startX + saveBtnW + 6;
-            int cancelBtnY = innerY;
-            int cancelBtnH = 14;
-            boolean cancelHovered = mouseX >= cancelBtnX && mouseX < cancelBtnX + cancelBtnW && mouseY >= cancelBtnY && mouseY < cancelBtnY + cancelBtnH;
-            int cancelColor = cancelHovered ? 0xFFCC6633 : 0xFFAA5522;
-            graphics.fill(cancelBtnX - 1, cancelBtnY - 1, cancelBtnX + cancelBtnW + 1, cancelBtnY + cancelBtnH + 1, 0xFF994422);
-            graphics.fill(cancelBtnX, cancelBtnY, cancelBtnX + cancelBtnW, cancelBtnY + cancelBtnH, cancelColor);
-            graphics.fill(cancelBtnX, cancelBtnY, cancelBtnX + cancelBtnW, cancelBtnY + 1, 0x30FFFFFF);
-            graphics.fill(cancelBtnX, cancelBtnY + cancelBtnH - 1, cancelBtnX + cancelBtnW, cancelBtnY + cancelBtnH, 0x40000000);
-            graphics.drawString(font, "Cancel", cancelBtnX + (cancelBtnW - font.width("Cancel")) / 2, cancelBtnY + 3, 0xFFFFFFFF, false);
         }
     }
 
@@ -594,7 +435,7 @@ public class TitleScreen extends Screen {
         int totalPages = Math.max(1, (int)Math.ceil((double)allTitles.size() / titlesPerPage));
 
         int listX = guiLeft + MARGIN;
-        int listY = guiTop + 36;
+        int listY = listStartY;
         int startIndex = currentPage * titlesPerPage;
         int endIndex = Math.min(startIndex + titlesPerPage, allTitles.size());
         for (int i = startIndex; i < endIndex; i++) {
@@ -606,7 +447,6 @@ public class TitleScreen extends Screen {
             }
         }
 
-        int pageY = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 16;
         if (currentPage > 0 && mx >= listX && mx < listX + 20 && my >= pageY - 2 && my < pageY + 10) {
             currentPage--;
             return true;
@@ -617,11 +457,9 @@ public class TitleScreen extends Screen {
         }
 
         if (selectedTitleId >= 0) {
-            int detailX = guiLeft + DIVIDER_X + 8;
-            int detailWidth = GUI_WIDTH - DIVIDER_X - MARGIN - 8;
             int btnWidth = Math.min(detailWidth, 110);
             int btnX = detailX + (detailWidth - btnWidth) / 2;
-            int btnY = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT - 28;
+            int btnY = equipBtnY;
             int btnHeight = 16;
             if (mx >= btnX && mx < btnX + btnWidth && my >= btnY && my < btnY + btnHeight) {
                 if (minecraft != null && minecraft.player != null) {
@@ -638,149 +476,6 @@ public class TitleScreen extends Screen {
                     }
                 }
                 return true;
-            }
-        }
-
-        CustomTitleData ct = ClientTitleData.getCustomTitle();
-        int customPanelY = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT;
-        int innerX = guiLeft + 12;
-        int innerWidth = GUI_WIDTH - 24;
-
-        if (ct.hasPermission()) {
-            if (!editingCustomTitle) {
-                int btnW = 46;
-                int btnH = 14;
-                int btnX = guiLeft + GUI_WIDTH - 12 - btnW;
-                int editBtnY = guiTop + GUI_HEIGHT - CUSTOM_PANEL_HEIGHT + 10;
-                if (mx >= btnX && mx < btnX + btnW && my >= editBtnY && my < editBtnY + btnH) {
-                    editingCustomTitle = true;
-                    customTitleEditText = ct.getText();
-                    customTitleEditColor1 = ct.getColor1();
-                    customTitleEditColor2 = ct.getColor2();
-                    return true;
-                }
-
-                int toggleBtnY = editBtnY + btnH + 4;
-                if (mx >= btnX && mx < btnX + btnW && my >= toggleBtnY && my < toggleBtnY + btnH) {
-                    LOGGER.debug("Toggle button clicked: currentUsing={}, sending useCustom={}", ct.isUsingCustomTitle(), !ct.isUsingCustomTitle());
-                    NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                        CustomTitleUpdatePacket.UpdateType.TOGGLE_USE, !ct.isUsingCustomTitle()));
-                    return true;
-                }
-            } else {
-                int saveBtnW = 50;
-                int cancelBtnW = 50;
-                int totalBtnW = saveBtnW + cancelBtnW + 6;
-                int startX = guiLeft + 12 + (innerWidth - totalBtnW) / 2;
-                int saveBtnH = 14;
-                int innerY = customPanelY + 8 + 13 + 13 + 6;
-                int saveBtnY = innerY;
-
-                int saveBtnX = startX;
-                if (mx >= saveBtnX && mx < saveBtnX + saveBtnW && my >= saveBtnY && my < saveBtnY + saveBtnH) {
-                    if (!customTitleEditText.isEmpty()) {
-                        NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                            CustomTitleUpdatePacket.UpdateType.SET_TEXT, customTitleEditText));
-                        if (ct.getPermission() >= CustomTitleData.PERMISSION_GRADIENT) {
-                            NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                                CustomTitleUpdatePacket.UpdateType.SET_COLOR2, customTitleEditColor1, customTitleEditColor2));
-                        } else {
-                            NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                                CustomTitleUpdatePacket.UpdateType.SET_COLOR1, customTitleEditColor1));
-                        }
-                    }
-                    editingCustomTitle = false;
-                    return true;
-                }
-
-                int cancelBtnX = startX + saveBtnW + 6;
-                if (mx >= cancelBtnX && mx < cancelBtnX + cancelBtnW && my >= saveBtnY && my < saveBtnY + saveBtnH) {
-                    editingCustomTitle = false;
-                    return true;
-                }
-            }
-            
-            // 颜色选择器交互逻辑（编辑模式下）
-            if (editingCustomTitle) {
-                int innerY = customPanelY + 8;
-                
-                // 计算颜色方块位置
-                int tfW = innerWidth - 80;
-                int tfX = innerX;
-                int tfY = innerY + 13; // 编辑标签后
-                int colorX = tfX + tfW + 10;
-                
-                // 检查颜色选择器面板点击
-                if (selectingColor1 || selectingColor2) {
-                    if (mx >= colorPickerX && mx < colorPickerX + colorPickerWidth && 
-                        my >= colorPickerY && my < colorPickerY + colorPickerHeight) {
-                        // 计算点击的颜色索引
-                        int squareSize = COLOR_SQUARE_SIZE;
-                        int margin = COLOR_SQUARE_MARGIN;
-                        int colorsPerRow = COLORS_PER_ROW;
-                        
-                        int relativeX = mx - (colorPickerX + 4);
-                        int relativeY = my - (colorPickerY + 4);
-                        
-                        int col = relativeX / (squareSize + margin);
-                        int row = relativeY / (squareSize + margin);
-                        
-                        if (col >= 0 && col < colorsPerRow && row >= 0 && row < Math.ceil((double)COLOR_PALETTE.length / colorsPerRow)) {
-                            int index = row * colorsPerRow + col;
-                            if (index >= 0 && index < COLOR_PALETTE.length) {
-                                int selectedColor = COLOR_PALETTE[index];
-                                if (selectingColor1) {
-                                    customTitleEditColor1 = selectedColor;
-                                    selectingColor1 = false;
-                                } else if (selectingColor2) {
-                                    customTitleEditColor2 = selectedColor;
-                                    selectingColor2 = false;
-                                }
-                                return true;
-                            }
-                        }
-                    }
-                    // 如果点击了颜色选择器面板外部，关闭颜色选择器
-                    selectingColor1 = false;
-                    selectingColor2 = false;
-                    return true;
-                }
-                
-                // 检查颜色方块点击
-                if (ct.getPermission() >= CustomTitleData.PERMISSION_GRADIENT) {
-                    // 颜色1方块
-                    int color1SquareX = colorX + 16;
-                    int color1SquareY = tfY; // 文本字段的Y坐标，与renderCustomPanel中的innerY相同
-                    
-                    if (mx >= color1SquareX && mx < color1SquareX + COLOR_SQUARE_SIZE &&
-                        my >= color1SquareY && my < color1SquareY + COLOR_SQUARE_SIZE) {
-                        selectingColor1 = true;
-                        selectingColor2 = false;
-                        return true;
-                    }
-                    
-                    // 颜色2方块
-                    int color2SquareX = colorX + 16;
-                    int color2SquareY = tfY + 11; // 第505行使用innerY + 11
-                    
-                    if (mx >= color2SquareX && mx < color2SquareX + COLOR_SQUARE_SIZE &&
-                        my >= color2SquareY && my < color2SquareY + COLOR_SQUARE_SIZE) {
-                        selectingColor1 = false;
-                        selectingColor2 = true;
-                        return true;
-                    }
-                } else {
-                    // 单色方块
-                    int colorSquareX = colorX + 36;
-                    int colorSquareY = tfY; // 第514行使用innerY
-                    
-                    if (mx >= colorSquareX && mx < colorSquareX + COLOR_SQUARE_SIZE &&
-                        my >= colorSquareY && my < colorSquareY + COLOR_SQUARE_SIZE) {
-                        selectingColor1 = true;
-                        selectingColor2 = false;
-                        return true;
-                    }
-                }
             }
         }
 
@@ -808,56 +503,16 @@ public class TitleScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (editingCustomTitle) {
-            if (keyCode == 256) {
-                editingCustomTitle = false;
-                return true;
-            }
-            if (keyCode == 257) {
-                CustomTitleData ct = ClientTitleData.getCustomTitle();
-                if (!customTitleEditText.isEmpty()) {
-                    NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                        CustomTitleUpdatePacket.UpdateType.SET_TEXT, customTitleEditText));
-                    if (ct.getPermission() >= CustomTitleData.PERMISSION_GRADIENT) {
-                        NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                            CustomTitleUpdatePacket.UpdateType.SET_COLOR2, customTitleEditColor1, customTitleEditColor2));
-                    } else {
-                        NetworkHandler.getChannel().sendToServer(new CustomTitleUpdatePacket(
-                            CustomTitleUpdatePacket.UpdateType.SET_COLOR1, customTitleEditColor1));
-                    }
-                }
-                editingCustomTitle = false;
-                return true;
-            }
-            if (keyCode == 259) {
-                if (!customTitleEditText.isEmpty()) {
-                    customTitleEditText = customTitleEditText.substring(0, customTitleEditText.length() - 1);
-                }
-                return true;
-            }
-        }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char codePoint, int modifiers) {
-        if (editingCustomTitle) {
-            // 允许ASCII字符和汉字等Unicode字母数字字符
-            if ((codePoint >= 32 && codePoint <= 126) || Character.isLetterOrDigit(codePoint)) {
-                int maxLen = 16;
-                if (customTitleEditText.length() < maxLen) {
-                    customTitleEditText += codePoint;
-                }
-                return true;
-            }
-        }
         return super.charTyped(codePoint, modifiers);
     }
 
     private TitleDefinition findTitle(int id) {
-        for (TitleDefinition def : ClientTitleData.getTitleRegistry())
-            if (def.getId() == id) return def;
-        return null;
+        return ClientTitleData.getTitleById(id);
     }
 
     private int getCurrentProgress(com.kavinshi.playertitle.title.TitleCondition condition,
@@ -886,64 +541,6 @@ public class TitleScreen extends Screen {
         }
         lines.add(remaining);
         return lines;
-    }
-
-    private void renderColorSquare(GuiGraphics graphics, int x, int y, int color, int mouseX, int mouseY) {
-        int size = COLOR_SQUARE_SIZE;
-        boolean hovered = mouseX >= x && mouseX < x + size && mouseY >= y && mouseY < y + size;
-        
-        // 绘制边框
-        int borderColor = hovered ? 0xFFFFFFFF : 0xFFAAAAAA;
-        graphics.fill(x - 1, y - 1, x + size + 1, y + size + 1, borderColor);
-        
-        // 绘制颜色方块
-        graphics.fill(x, y, x + size, y + size, 0xFF000000 | color);
-        
-        // 绘制高光效果
-        graphics.fill(x, y, x + size, y + 1, 0x30FFFFFF);
-        graphics.fill(x, y + size - 1, x + size, y + size, 0x40000000);
-    }
-
-    private void renderColorPickerPanel(GuiGraphics graphics, Font font, int mouseX, int mouseY, int panelX, int panelY) {
-        int colorsPerRow = COLORS_PER_ROW;
-        int squareSize = COLOR_SQUARE_SIZE;
-        int margin = COLOR_SQUARE_MARGIN;
-        int totalColors = COLOR_PALETTE.length;
-        int rows = (int) Math.ceil((double) totalColors / colorsPerRow);
-        
-        // 计算面板尺寸
-        colorPickerWidth = colorsPerRow * (squareSize + margin) - margin + 8;
-        colorPickerHeight = rows * (squareSize + margin) - margin + 8;
-        colorPickerX = panelX;
-        colorPickerY = panelY;
-        
-        // 绘制面板背景
-        graphics.fill(colorPickerX, colorPickerY, colorPickerX + colorPickerWidth, colorPickerY + colorPickerHeight, 0xFF202020);
-        graphics.fill(colorPickerX, colorPickerY, colorPickerX + colorPickerWidth, colorPickerY + 1, 0xFFCC8844);
-        graphics.fill(colorPickerX, colorPickerY + colorPickerHeight - 1, colorPickerX + colorPickerWidth, colorPickerY + colorPickerHeight, 0xFF996633);
-        
-        // 绘制颜色方块
-        int currentX = colorPickerX + 4;
-        int currentY = colorPickerY + 4;
-        
-        for (int i = 0; i < totalColors; i++) {
-            int color = COLOR_PALETTE[i];
-            int squareX = currentX + (i % colorsPerRow) * (squareSize + margin);
-            int squareY = currentY + (i / colorsPerRow) * (squareSize + margin);
-            
-            boolean hovered = mouseX >= squareX && mouseX < squareX + squareSize && mouseY >= squareY && mouseY < squareY + squareSize;
-            
-            // 绘制边框
-            int borderColor = hovered ? 0xFFFFFFFF : 0xFF666666;
-            graphics.fill(squareX - 1, squareY - 1, squareX + squareSize + 1, squareY + squareSize + 1, borderColor);
-            
-            // 绘制颜色方块
-            graphics.fill(squareX, squareY, squareX + squareSize, squareY + squareSize, 0xFF000000 | color);
-            
-            // 绘制高光效果
-            graphics.fill(squareX, squareY, squareX + squareSize, squareY + 1, 0x30FFFFFF);
-            graphics.fill(squareX, squareY + squareSize - 1, squareX + squareSize, squareY + squareSize, 0x40000000);
-        }
     }
 
     @Override

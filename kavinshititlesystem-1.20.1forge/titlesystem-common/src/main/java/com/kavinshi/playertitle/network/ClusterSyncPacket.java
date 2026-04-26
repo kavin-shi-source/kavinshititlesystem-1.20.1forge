@@ -2,13 +2,14 @@ package com.kavinshi.playertitle.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
 public class ClusterSyncPacket extends AbstractPacket {
-    private static final Logger LOGGER = LogManager.getLogger(ClusterSyncPacket.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterSyncPacket.class);
+    private static final int MAX_PAYLOAD_SIZE = 65536;
 
     private final String sourceServer;
     private final String eventType;
@@ -24,7 +25,7 @@ public class ClusterSyncPacket extends AbstractPacket {
         this.playerId = playerId;
         this.revision = revision;
         this.timestampMs = timestampMs;
-        this.payload = payload;
+        this.payload = truncatePayload(payload);
     }
 
     public ClusterSyncPacket(FriendlyByteBuf buffer) {
@@ -33,7 +34,21 @@ public class ClusterSyncPacket extends AbstractPacket {
         this.playerId = readUUID(buffer);
         this.revision = buffer.readLong();
         this.timestampMs = buffer.readLong();
-        this.payload = readString(buffer);
+        this.payload = truncatePayload(readString(buffer));
+    }
+
+    private static String truncatePayload(String payload) {
+        if (payload == null) return "";
+        byte[] bytes = payload.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        if (bytes.length <= MAX_PAYLOAD_SIZE) return payload;
+        LOGGER.warn("ClusterSyncPacket payload too large ({} bytes), truncating to {} bytes",
+            bytes.length, MAX_PAYLOAD_SIZE);
+        byte[] truncated = new byte[MAX_PAYLOAD_SIZE];
+        System.arraycopy(bytes, 0, truncated, 0, MAX_PAYLOAD_SIZE);
+        int end = MAX_PAYLOAD_SIZE;
+        while (end > 0 && (truncated[end - 1] & 0xC0) == 0x80) end--;
+        if (end > 0 && (truncated[end - 1] & 0x80) != 0) end--;
+        return new String(truncated, 0, end, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Override
@@ -48,14 +63,11 @@ public class ClusterSyncPacket extends AbstractPacket {
 
     @Override
     public void handle(NetworkEvent.Context context) {
-        context.enqueueWork(() -> {
-            try {
-                PacketHandlers.handleClusterSync(sourceServer, eventType, playerId, revision, timestampMs, payload);
-            } catch (Exception e) {
-                LOGGER.error("Error handling ClusterSyncPacket", e);
-            }
-        });
-        context.setPacketHandled(true);
+        try {
+            PacketHandlers.handleClusterSync(sourceServer, eventType, playerId, revision, timestampMs, payload);
+        } catch (Exception e) {
+            LOGGER.error("Error handling ClusterSyncPacket", e);
+        }
     }
 
     public String getSourceServer() { return sourceServer; }

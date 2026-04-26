@@ -1,6 +1,7 @@
 package com.kavinshi.playertitle.bootstrap;
 
 import com.kavinshi.playertitle.config.JsonTitleConfigRepository;
+import com.kavinshi.playertitle.handler.PlayerTitleDataBridge;
 import com.kavinshi.playertitle.icon.IconManager;
 import com.kavinshi.playertitle.icon.IconService;
 import com.kavinshi.playertitle.network.NetworkHandler;
@@ -9,6 +10,7 @@ import com.kavinshi.playertitle.service.TitleEquipService;
 import com.kavinshi.playertitle.service.TitleProgressService;
 import com.kavinshi.playertitle.title.TitleRegistry;
 import com.mojang.logging.LogUtils;
+import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -17,7 +19,7 @@ import java.nio.file.Path;
 
 public final class RewriteBootstrap {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static RewriteBootstrap instance;
+    private static volatile RewriteBootstrap instance;
 
     private IconManager iconManager;
     private IconService iconService;
@@ -28,6 +30,7 @@ public final class RewriteBootstrap {
     private TitleProgressService titleProgressService;
     private ClusterEventBus eventBus;
     private ClusterConfig clusterConfig;
+    private PlayerTitleDataBridge playerTitleDataBridge;
 
     private RewriteBootstrap() {
         initializeComponents();
@@ -79,6 +82,11 @@ public final class RewriteBootstrap {
             LOGGER.info("Event bus started: {}", this.eventBus.getImplementationName());
         } catch (Exception e) {
             LOGGER.error("Failed to start event bus: {}, falling back to LOCAL", e.getMessage());
+            try {
+                this.eventBus.stop();
+            } catch (Exception stopEx) {
+                LOGGER.warn("Failed to stop failed event bus", stopEx);
+            }
             this.eventBus = new LocalEventBus();
         }
 
@@ -165,4 +173,17 @@ public final class RewriteBootstrap {
     public TitleProgressService getTitleProgressService() { return titleProgressService; }
     public ClusterEventBus getEventBus() { return eventBus; }
     public ClusterConfig getClusterConfig() { return clusterConfig; }
+
+    public void onServerStarting(MinecraftServer server) {
+        this.titleEquipService.onServerStarting(server);
+        this.titleProgressService.onServerStarting(server);
+
+        if (this.playerTitleDataBridge == null) {
+            this.playerTitleDataBridge = new PlayerTitleDataBridge(server, titleRegistry, clusterConfig);
+            this.playerTitleDataBridge.subscribeToEvents(eventBus);
+            LOGGER.info("PlayerTitleDataBridge initialized and subscribed to events");
+        }
+    }
+
+    public PlayerTitleDataBridge getPlayerTitleDataBridge() { return playerTitleDataBridge; }
 }

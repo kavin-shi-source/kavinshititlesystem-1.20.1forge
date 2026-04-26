@@ -72,3 +72,38 @@ tasks.register('cleanAll') {
     dependsOn subprojects.collect { it.tasks.named('clean') }
     description = '清理所有子模块'
 }
+
+tasks.register('copyArtifacts', Copy) {
+    dependsOn buildAll
+    description = '将所有构建产物复制到 build-output 目录并按模块分类存放'
+
+    def outputDir = file("${project.projectDir}/build-output")
+
+    doFirst {
+        outputDir.deleteDir()
+        outputDir.mkdirs()
+    }
+
+    subprojects.each { subproject ->
+        from(subproject.layout.buildDirectory.dir("libs")) {
+            include '*.jar'
+            exclude '*-sources.jar'
+            exclude '*-javadoc.jar'
+            exclude '*-slim.jar'
+            exclude '*-extra.jar'
+            // 如果存在 -all.jar（shadowJar），则排除原本的 jar
+            // 这在 gradle 中难以直接条件判断排除，我们可以更精准地通过 include
+            if (subproject.name == 'velocity-bridge') {
+                include '*-all.jar'
+                exclude '*-all-*.jar'
+                // 排除未 shadow 的原始 jar
+                exclude { details -> 
+                    details.file.name == "${subproject.name}-${subproject.version}.jar"
+                }
+            }
+            into subproject.name.replace('titlesystem-', '')
+        }
+    }
+    
+    destinationDir = outputDir
+}

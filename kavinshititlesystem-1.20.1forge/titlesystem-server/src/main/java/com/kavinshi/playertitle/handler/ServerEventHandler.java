@@ -31,7 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class ServerEventHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerEventHandler.class);
 
-    private static final Map<UUID, Integer> aliveTickMap = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> aliveTickMap = new ConcurrentHashMap<>();
     private static final Map<UUID, CompoundTag> deathDataCache = new ConcurrentHashMap<>();
     private static long lastProgressCheckTick = 0;
     private static int currentPlayerIndex = 0;
@@ -43,7 +43,6 @@ public final class ServerEventHandler {
             if (event.getSource().getEntity() instanceof ServerPlayer player) {
                 TitleCapability.get(player).ifPresent(state -> {
                     String entityId = mob.getType().getDescriptionId();
-                    state.addKill(entityId);
                     RewriteBootstrap.getInstance().getTitleProgressService()
                             .recordKill(state, getTitleRegistry(), entityId, true, mob.getUUID().toString());
                 });
@@ -86,7 +85,7 @@ public final class ServerEventHandler {
 
             ServerPlayer player = players.get(currentPlayerIndex);
             TitleCapability.get(player).ifPresent(state -> {
-                int startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> (int) currentTick);
+                long startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> currentTick);
                 int aliveMinutes = (int) ((currentTick - startTick) / 1200);
                 if (aliveMinutes != state.getAliveMinutes()) {
                     RewriteBootstrap.getInstance().getTitleProgressService()
@@ -102,7 +101,7 @@ public final class ServerEventHandler {
         } else {
             for (ServerPlayer player : players) {
                 TitleCapability.get(player).ifPresent(state -> {
-                    int startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> (int) currentTick);
+                    long startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> currentTick);
                     int aliveMinutes = (int) ((currentTick - startTick) / 1200);
                     if (aliveMinutes != state.getAliveMinutes()) {
                         RewriteBootstrap.getInstance().getTitleProgressService()
@@ -120,7 +119,7 @@ public final class ServerEventHandler {
             UUID playerId = player.getUUID();
             LOGGER.debug("Player joined: {} ({})", playerId, player.getGameProfile().getName());
 
-            aliveTickMap.put(playerId, player.server.getTickCount());
+            aliveTickMap.put(playerId, (long) player.server.getTickCount());
             TitleCapability.get(player).ifPresent(state -> {
                 LOGGER.debug("Player data loaded: {} unlocked titles, {} kill entries, equipped title: {}",
                     state.getUnlockedTitleIds().size(), state.getKillCounts().size(), state.getEquippedTitleId());
@@ -141,6 +140,8 @@ public final class ServerEventHandler {
         UUID uuid = event.getEntity().getUUID();
         aliveTickMap.remove(uuid);
         deathDataCache.remove(uuid);
+        RewriteBootstrap.getInstance().getRevisionService().removePlayer(uuid);
+        com.kavinshi.playertitle.network.RequestSyncPacket.cleanupPlayer(uuid);
     }
 
     @SubscribeEvent
@@ -172,19 +173,13 @@ public final class ServerEventHandler {
             }
             newState.setKillCounts(oldState.getKillCounts());
             newState.setEquippedTitleId(oldState.getEquippedTitleId());
-            newState.setAliveMinutes(0);
 
-            var oldCustomTitle = oldState.getCustomTitle();
-            newState.setCustomTitlePermission(oldCustomTitle.getPermission());
-            if (oldCustomTitle.getPermission() > com.kavinshi.playertitle.title.CustomTitleData.PERMISSION_NONE) {
-                newState.setCustomTitleText(oldCustomTitle.getText());
-                newState.setCustomTitleColor1(oldCustomTitle.getColor1());
-                if (oldCustomTitle.getPermission() >= com.kavinshi.playertitle.title.CustomTitleData.PERMISSION_GRADIENT) {
-                    newState.setCustomTitleColor2(oldCustomTitle.getColor2());
-                }
-                newState.setUsingCustomTitle(oldCustomTitle.isUsingCustomTitle());
-                newState.getCustomTitle().setLastModifiedTime(oldCustomTitle.getLastModifiedTime());
+            int equippedId = oldState.getEquippedTitleId();
+            if (equippedId >= 0) {
+                BuffHandler.applyBuffs((ServerPlayer) event.getEntity(), equippedId);
             }
+
+            newState.setAliveMinutes(0);
 
             newState.markClean();
             LOGGER.debug("Copied title data for player {}: {} unlocked titles, equipped: {}",
@@ -195,7 +190,7 @@ public final class ServerEventHandler {
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            aliveTickMap.put(player.getUUID(), player.server.getTickCount());
+            aliveTickMap.put(player.getUUID(), (long) player.server.getTickCount());
             TitleCapability.get(player).ifPresent(state -> syncPlayerData(player, state));
         }
     }

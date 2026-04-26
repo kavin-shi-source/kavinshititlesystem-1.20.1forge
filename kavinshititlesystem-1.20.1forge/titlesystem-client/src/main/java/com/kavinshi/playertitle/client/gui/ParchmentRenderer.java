@@ -21,35 +21,37 @@ public final class ParchmentRenderer {
     public static void render(PoseStack poseStack, int x, int y, int width, int height, int dividerX) {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-        Matrix4f matrix = poseStack.last().pose();
+        try {
+            Matrix4f matrix = poseStack.last().pose();
 
-        fillRect(matrix, x + 3, y + 3, x + width, y + height, SHADOW);
-        fillRect(matrix, x, y, x + width - 3, y + height - 3, BORDER_GOLD);
-        fillRect(matrix, x + 2, y + 2, x + width - 5, y + height - 5, BORDER_DARK);
-        fillRect(matrix, x + 3, y + 3, x + width - 6, y + height - 6, 0xFFF0E0C0);
-        fillRect(matrix, x + 4, y + 4, x + width - 7, y + height - 7, FILL);
+            fillRect(matrix, x + 3, y + 3, x + width, y + height, SHADOW);
+            fillRect(matrix, x, y, x + width - 3, y + height - 3, BORDER_GOLD);
+            fillRect(matrix, x + 2, y + 2, x + width - 5, y + height - 5, BORDER_DARK);
+            fillRect(matrix, x + 3, y + 3, x + width - 6, y + height - 6, 0xFFF0E0C0);
+            fillRect(matrix, x + 4, y + 4, x + width - 7, y + height - 7, FILL);
 
-        for (int ly = y + 8; ly < y + height - 8; ly += 4) {
-            fillRect(matrix, x + 6, ly, x + width - 9, ly + 1, LINE_SUBTLE);
+            for (int ly = y + 8; ly < y + height - 8; ly += 4) {
+                fillRect(matrix, x + 6, ly, x + width - 9, ly + 1, LINE_SUBTLE);
+            }
+
+            int cs = 14;
+            int ct = 2;
+            fillRect(matrix, x + 4, y + 4, x + 4 + cs, y + 4 + ct, BORDER_GOLD);
+            fillRect(matrix, x + 4, y + 4, x + 4 + ct, y + 4 + cs, BORDER_GOLD);
+            fillRect(matrix, x + width - 7 - cs, y + 4, x + width - 7, y + 4 + ct, BORDER_GOLD);
+            fillRect(matrix, x + width - 7 - ct, y + 4, x + width - 7, y + 4 + cs, BORDER_GOLD);
+            fillRect(matrix, x + 4, y + height - 7 - ct, x + 4 + cs, y + height - 7, BORDER_GOLD);
+            fillRect(matrix, x + 4, y + height - 7 - cs, x + 4 + ct, y + height - 7, BORDER_GOLD);
+            fillRect(matrix, x + width - 7 - cs, y + height - 7 - ct, x + width - 7, y + height - 7, BORDER_GOLD);
+            fillRect(matrix, x + width - 7 - ct, y + height - 7 - cs, x + width - 7, y + height - 7, BORDER_GOLD);
+
+            if (dividerX > 0) {
+                fillRect(matrix, dividerX, y + 20, dividerX + 1, y + height - 20, DIVIDER_GOLD);
+                fillRect(matrix, dividerX + 1, y + 20, dividerX + 2, y + height - 20, 0x20000000);
+            }
+        } finally {
+            RenderSystem.disableBlend();
         }
-
-        int cs = 14;
-        int ct = 2;
-        fillRect(matrix, x + 4, y + 4, x + 4 + cs, y + 4 + ct, BORDER_GOLD);
-        fillRect(matrix, x + 4, y + 4, x + 4 + ct, y + 4 + cs, BORDER_GOLD);
-        fillRect(matrix, x + width - 7 - cs, y + 4, x + width - 7, y + 4 + ct, BORDER_GOLD);
-        fillRect(matrix, x + width - 7 - ct, y + 4, x + width - 7, y + 4 + cs, BORDER_GOLD);
-        fillRect(matrix, x + 4, y + height - 7 - ct, x + 4 + cs, y + height - 7, BORDER_GOLD);
-        fillRect(matrix, x + 4, y + height - 7 - cs, x + 4 + ct, y + height - 7, BORDER_GOLD);
-        fillRect(matrix, x + width - 7 - cs, y + height - 7 - ct, x + width - 7, y + height - 7, BORDER_GOLD);
-        fillRect(matrix, x + width - 7 - ct, y + height - 7 - cs, x + width - 7, y + height - 7, BORDER_GOLD);
-
-        if (dividerX > 0) {
-            fillRect(matrix, dividerX, y + 20, dividerX + 1, y + height - 20, DIVIDER_GOLD);
-            fillRect(matrix, dividerX + 1, y + 20, dividerX + 2, y + height - 20, 0x20000000);
-        }
-
-        RenderSystem.disableBlend();
     }
 
     @SuppressWarnings("null")

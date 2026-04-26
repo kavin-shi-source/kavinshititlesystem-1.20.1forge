@@ -1,25 +1,54 @@
 package com.kavinshi.playertitle.sync;
 
-/**
- * 跨服事件类型枚举，定义可在不同服务器之间同步的事件类型。
- * 每个事件类型对应一个具体的业务操作，用于Redis Pub/Sub消息分发。
- */
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public enum ClusterEventType {
-    /** 玩家获得新称号 */
     TITLE_ASSIGNED,
-    
-    /** 玩家移除称号 */
     TITLE_REMOVED,
-    
-    /** 玩家称号更新（图标、颜色、样式等变更） */
     TITLE_UPDATED,
-    
-    /** 玩家称号进度更新 */
     TITLE_PROGRESS_UPDATED,
-    
-    /** 玩家称号装备状态变更 */
     TITLE_EQUIP_STATE_CHANGED,
-    
-    /** 服务器公告（跨服消息） */
-    SERVER_ANNOUNCEMENT
+    SERVER_ANNOUNCEMENT;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterEventType.class);
+    private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder()
+        .addModule(new ParameterNamesModule())
+        .addModule(new JavaTimeModule())
+        .build();
+
+    public Class<? extends ClusterSyncEvent> getEventClass() {
+        return switch (this) {
+            case TITLE_ASSIGNED -> TitleAssignedEvent.class;
+            case TITLE_REMOVED -> TitleRemovedEvent.class;
+            case TITLE_UPDATED -> TitleUpdatedEvent.class;
+            case TITLE_PROGRESS_UPDATED -> TitleProgressUpdatedEvent.class;
+            case TITLE_EQUIP_STATE_CHANGED -> TitleEquipStateChangedEvent.class;
+            case SERVER_ANNOUNCEMENT -> ServerAnnouncementEvent.class;
+        };
+    }
+
+    public static ClusterSyncEvent deserialize(String payload) {
+        try {
+            var root = OBJECT_MAPPER.readTree(payload);
+            var eventTypeNode = root.get("eventType");
+            if (eventTypeNode == null || eventTypeNode.isNull()) {
+                LOGGER.warn("Missing 'eventType' field in cluster event payload");
+                return null;
+            }
+            String eventTypeStr = eventTypeNode.asText();
+            ClusterEventType eventType = ClusterEventType.valueOf(eventTypeStr);
+            return OBJECT_MAPPER.readValue(payload, eventType.getEventClass());
+        } catch (IllegalArgumentException e) {
+            LOGGER.warn("Unknown event type in payload: {}", e.getMessage());
+            return null;
+        } catch (Exception e) {
+            LOGGER.error("Failed to deserialize cluster event: {}", e.getMessage());
+            return null;
+        }
+    }
 }

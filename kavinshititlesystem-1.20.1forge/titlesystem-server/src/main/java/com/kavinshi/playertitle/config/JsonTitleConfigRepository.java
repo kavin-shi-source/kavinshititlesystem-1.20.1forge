@@ -1,7 +1,6 @@
 package com.kavinshi.playertitle.config;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonParseException;
+import com.google.gson.*;
 import com.kavinshi.playertitle.title.*;
 import java.io.IOException;
 import java.io.Reader;
@@ -11,12 +10,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class JsonTitleConfigRepository implements TitleConfigRepository {
-    private final Gson gson = new Gson();
+    private static final Gson GSON = new GsonBuilder()
+        .registerTypeAdapter(int.class, new ColorDeserializer())
+        .registerTypeAdapter(Integer.class, new ColorDeserializer())
+        .create();
 
     @Override
     public List<TitleDefinition> loadDefinitions(Path path) {
         try (Reader reader = Files.newBufferedReader(path)) {
-            JsonTitleDefinition[] rawDefinitions = this.gson.fromJson(reader, JsonTitleDefinition[].class);
+            JsonTitleDefinition[] rawDefinitions = GSON.fromJson(reader, JsonTitleDefinition[].class);
             if (rawDefinitions == null) {
                 return List.of();
             }
@@ -35,22 +37,20 @@ public final class JsonTitleConfigRepository implements TitleConfigRepository {
         List<TitleCondition> conditions = new ArrayList<>();
         if (raw.conditions != null) {
             for (JsonTitleCondition condition : raw.conditions) {
-                conditions.add(new TitleCondition(
-                    TitleConditionType.valueOf(condition.type),
-                    condition.target,
-                    condition.requiredCount
-                ));
+                TitleConditionType type = TitleParseUtils.safeConditionType(condition.type);
+                if (type != null) {
+                    conditions.add(new TitleCondition(type, condition.target, condition.requiredCount));
+                }
             }
         }
 
         List<TitleBuff> buffs = new ArrayList<>();
         if (raw.buffs != null) {
             for (JsonTitleBuff buff : raw.buffs) {
-                buffs.add(new TitleBuff(
-                    TitleBuff.BuffType.valueOf(buff.type),
-                    buff.value,
-                    buff.target
-                ));
+                TitleBuff.BuffType type = TitleParseUtils.safeBuffType(buff.type);
+                if (type != null) {
+                    buffs.add(new TitleBuff(type, buff.value, buff.target));
+                }
             }
         }
 
@@ -109,5 +109,33 @@ public final class JsonTitleConfigRepository implements TitleConfigRepository {
     private static final class JsonAnimationProfile {
         int cycleMillis;
         int stepSize;
+    }
+
+    private static final class ColorDeserializer implements JsonDeserializer<Integer> {
+        @Override
+        public Integer deserialize(JsonElement json, java.lang.reflect.Type typeOfT,
+                                   JsonDeserializationContext context) throws JsonParseException {
+            if (json.isJsonPrimitive()) {
+                JsonPrimitive prim = json.getAsJsonPrimitive();
+                if (prim.isNumber()) {
+                    return prim.getAsInt();
+                }
+                if (prim.isString()) {
+                    String hex = prim.getAsString().trim();
+                    if (hex.startsWith("#")) hex = hex.substring(1);
+                    if (hex.length() == 3) {
+                        hex = "" + hex.charAt(0) + hex.charAt(0)
+                            + hex.charAt(1) + hex.charAt(1)
+                            + hex.charAt(2) + hex.charAt(2);
+                    }
+                    try {
+                        return Integer.parseInt(hex, 16);
+                    } catch (NumberFormatException e) {
+                        throw new JsonParseException("Invalid hex color: " + prim.getAsString());
+                    }
+                }
+            }
+            return 0xFFFFFF;
+        }
     }
 }

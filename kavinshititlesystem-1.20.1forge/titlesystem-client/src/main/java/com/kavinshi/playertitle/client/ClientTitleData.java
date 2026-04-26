@@ -1,137 +1,175 @@
 package com.kavinshi.playertitle.client;
 
-import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.title.TitleDefinition;
 
+import net.minecraft.network.chat.Component;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ClientTitleData {
     private ClientTitleData() {}
 
-    private static final Set<Integer> EMPTY_INT_SET = Collections.emptySet();
-    private static final Map<String, Integer> EMPTY_STR_INT_MAP = Collections.emptyMap();
-
-    private static int equippedTitleId = -1;
-    private static Set<Integer> unlockedTitles = EMPTY_INT_SET;
-    private static Map<String, Integer> killCounts = EMPTY_STR_INT_MAP;
-    private static int aliveMinutes = 0;
-    private static List<TitleDefinition> titleRegistry = Collections.emptyList();
-    private static Map<Integer, TitleDefinition> titleById = Collections.emptyMap();
+    private static volatile PlayerDataSnapshot snapshot = PlayerDataSnapshot.EMPTY;
     private static final Map<UUID, EquippedTitleInfo> playerTitles = new ConcurrentHashMap<>();
-    private static CustomTitleData customTitle = new CustomTitleData();
+    private static final Map<UUID, Component> componentCache = new ConcurrentHashMap<>();
+    public static String heading = "";
 
     public static void updatePlayerData(int equippedId, Set<Integer> unlocked,
-                                         Map<String, Integer> kills, int alive,
-                                         CustomTitleData ct) {
-        equippedTitleId = equippedId;
-        unlockedTitles = unlocked;
-        killCounts = kills;
-        aliveMinutes = alive;
-        if (ct != null) {
-            customTitle = ct;
-        }
+                                         Map<String, Integer> kills, int alive, String heading) {
+        snapshot = new PlayerDataSnapshot(
+            equippedId,
+            unlocked != null ? Collections.unmodifiableSet(new HashSet<>(unlocked)) : Collections.emptySet(),
+            kills != null ? Collections.unmodifiableMap(new HashMap<>(kills)) : Collections.emptyMap(),
+            alive,
+            snapshot.titleRegistry,
+            snapshot.titleById
+        );
+        ClientTitleData.heading = heading != null ? heading : "";
     }
 
     public static void addUnlockedTitle(int titleId) {
-        if (unlockedTitles == EMPTY_INT_SET) {
-            unlockedTitles = new HashSet<>();
-        }
-        unlockedTitles.add(titleId);
+        PlayerDataSnapshot current = snapshot;
+        Set<Integer> newSet = new HashSet<>(current.unlockedTitles);
+        newSet.add(titleId);
+        snapshot = new PlayerDataSnapshot(
+            current.equippedTitleId,
+            Collections.unmodifiableSet(newSet),
+            current.killCounts,
+            current.aliveMinutes,
+            current.titleRegistry,
+            current.titleById
+        );
     }
 
     public static void removeUnlockedTitle(int titleId) {
-        if (unlockedTitles != EMPTY_INT_SET) {
-            unlockedTitles.remove(titleId);
-        }
+        PlayerDataSnapshot current = snapshot;
+        Set<Integer> newSet = new HashSet<>(current.unlockedTitles);
+        newSet.remove(titleId);
+        snapshot = new PlayerDataSnapshot(
+            current.equippedTitleId,
+            Collections.unmodifiableSet(newSet),
+            current.killCounts,
+            current.aliveMinutes,
+            current.titleRegistry,
+            current.titleById
+        );
     }
 
     public static void updateKillCount(String entityId, int count) {
-        if (killCounts == EMPTY_STR_INT_MAP) {
-            killCounts = new HashMap<>();
-        }
-        killCounts.put(entityId, count);
+        PlayerDataSnapshot current = snapshot;
+        Map<String, Integer> newMap = new HashMap<>(current.killCounts);
+        newMap.put(entityId, count);
+        snapshot = new PlayerDataSnapshot(
+            current.equippedTitleId,
+            current.unlockedTitles,
+            Collections.unmodifiableMap(newMap),
+            current.aliveMinutes,
+            current.titleRegistry,
+            current.titleById
+        );
     }
 
     public static void updateAliveMinutes(int minutes) {
-        aliveMinutes = minutes;
+        PlayerDataSnapshot current = snapshot;
+        snapshot = new PlayerDataSnapshot(
+            current.equippedTitleId,
+            current.unlockedTitles,
+            current.killCounts,
+            minutes,
+            current.titleRegistry,
+            current.titleById
+        );
     }
 
     public static void updateTitleRegistry(List<TitleDefinition> titles) {
-        titleRegistry = titles;
+        PlayerDataSnapshot current = snapshot;
+        List<TitleDefinition> immutableList = Collections.unmodifiableList(new ArrayList<>(titles));
         Map<Integer, TitleDefinition> index = new HashMap<>(titles.size());
         for (TitleDefinition def : titles) {
             index.put(def.getId(), def);
         }
-        titleById = index;
+        Map<Integer, TitleDefinition> immutableIndex = Collections.unmodifiableMap(index);
+        snapshot = new PlayerDataSnapshot(
+            current.equippedTitleId,
+            current.unlockedTitles,
+            current.killCounts,
+            current.aliveMinutes,
+            immutableList,
+            immutableIndex
+        );
     }
 
     public static void updatePlayerEquippedTitle(UUID playerId, int titleId,
-                                                   String titleName, int titleColor, String chromaType) {
+                                                   String titleName, int titleColor, String chromaType,
+                                                   int color2) {
         if (titleId >= 0) {
-            playerTitles.put(playerId, new EquippedTitleInfo(titleId, titleName, titleColor,
-                chromaType != null ? chromaType : "NONE"));
+            EquippedTitleInfo info = new EquippedTitleInfo(titleId, titleName, titleColor,
+                chromaType != null ? chromaType : "NONE", color2);
+            playerTitles.put(playerId, info);
+            
+            // Build the static component to avoid GC storms during RenderNameTagEvent
+            Component builtComp = com.kavinshi.playertitle.title.TitleDisplayHelper.createTitleComponent(
+                info.titleName, info.titleColor, com.kavinshi.playertitle.title.ChromaType.fromString(info.chromaType), info.color2
+            );
+            componentCache.put(playerId, builtComp);
         } else {
             playerTitles.remove(playerId);
+            componentCache.remove(playerId);
         }
     }
 
-    public static void updatePlayerCustomTitle(UUID playerId, CustomTitleData ct) {
-        if (ct != null && ct.isUsingCustomTitle() && ct.hasPermission()) {
-            playerTitles.put(playerId, new EquippedTitleInfo(-2, ct.getText(),
-                ct.getColor1(), ct.getEffectiveChromaType().name()));
-        }
+    public static Component getCachedTitleComponent(UUID playerId) {
+        return componentCache.get(playerId);
     }
 
     public static void clearAll() {
-        equippedTitleId = -1;
-        unlockedTitles = EMPTY_INT_SET;
-        killCounts = EMPTY_STR_INT_MAP;
-        aliveMinutes = 0;
-        titleRegistry = Collections.emptyList();
-        titleById = Collections.emptyMap();
+        snapshot = PlayerDataSnapshot.EMPTY;
         playerTitles.clear();
-        customTitle = new CustomTitleData();
+        componentCache.clear();
     }
 
-    public static int getEquippedTitleId() { return equippedTitleId; }
-    public static Set<Integer> getUnlockedTitles() { return unlockedTitles; }
-    public static Map<String, Integer> getKillCounts() { return killCounts; }
-    public static int getAliveMinutes() { return aliveMinutes; }
-    public static List<TitleDefinition> getTitleRegistry() { return titleRegistry; }
+    public static int getEquippedTitleId() { return snapshot.equippedTitleId; }
+    public static Set<Integer> getUnlockedTitles() { return snapshot.unlockedTitles; }
+    public static Map<String, Integer> getKillCounts() { return snapshot.killCounts; }
+    public static int getAliveMinutes() { return snapshot.aliveMinutes; }
+    public static List<TitleDefinition> getTitleRegistry() { return snapshot.titleRegistry; }
     public static Map<UUID, EquippedTitleInfo> getPlayerTitles() { return playerTitles; }
     public static EquippedTitleInfo getEquippedTitleForPlayer(UUID playerId) { return playerTitles.get(playerId); }
-    public static CustomTitleData getCustomTitle() { return customTitle; }
 
     public static TitleDefinition getTitleById(int id) {
-        return titleById.get(id);
+        return snapshot.titleById.get(id);
     }
 
     public static TitleDefinition getEquippedTitleDefinition() {
-        if (equippedTitleId < 0) return null;
-        return titleById.get(equippedTitleId);
+        PlayerDataSnapshot s = snapshot;
+        if (s.equippedTitleId < 0) return null;
+        return s.titleById.get(s.equippedTitleId);
     }
 
-    public static boolean isUsingCustomTitle() {
-        return customTitle.isUsingCustomTitle() && customTitle.hasPermission();
-    }
+    private static final class PlayerDataSnapshot {
+        static final PlayerDataSnapshot EMPTY = new PlayerDataSnapshot(
+            -1, Collections.emptySet(), Collections.emptyMap(), 0,
+            Collections.emptyList(), Collections.emptyMap()
+        );
 
-    public static String getEffectiveTitleName() {
-        if (isUsingCustomTitle()) return customTitle.getText();
-        TitleDefinition def = getEquippedTitleDefinition();
-        return def != null ? def.getName() : "";
-    }
+        final int equippedTitleId;
+        final Set<Integer> unlockedTitles;
+        final Map<String, Integer> killCounts;
+        final int aliveMinutes;
+        final List<TitleDefinition> titleRegistry;
+        final Map<Integer, TitleDefinition> titleById;
 
-    public static int getEffectiveTitleColor() {
-        if (isUsingCustomTitle()) return customTitle.getColor1();
-        TitleDefinition def = getEquippedTitleDefinition();
-        return def != null ? def.getColor() : 0xFFFFFF;
-    }
-
-    public static String getEffectiveChromaType() {
-        if (isUsingCustomTitle()) return customTitle.getEffectiveChromaType().name();
-        TitleDefinition def = getEquippedTitleDefinition();
-        return def != null ? def.getChromaType() : "NONE";
+        PlayerDataSnapshot(int equippedTitleId, Set<Integer> unlockedTitles,
+                           Map<String, Integer> killCounts, int aliveMinutes,
+                           List<TitleDefinition> titleRegistry,
+                           Map<Integer, TitleDefinition> titleById) {
+            this.equippedTitleId = equippedTitleId;
+            this.unlockedTitles = unlockedTitles;
+            this.killCounts = killCounts;
+            this.aliveMinutes = aliveMinutes;
+            this.titleRegistry = titleRegistry;
+            this.titleById = titleById;
+        }
     }
 
     public static final class EquippedTitleInfo {
@@ -139,12 +177,14 @@ public final class ClientTitleData {
         public final String titleName;
         public final int titleColor;
         public final String chromaType;
+        public final int color2;
 
-        public EquippedTitleInfo(int titleId, String titleName, int titleColor, String chromaType) {
+        public EquippedTitleInfo(int titleId, String titleName, int titleColor, String chromaType, int color2) {
             this.titleId = titleId;
             this.titleName = titleName;
             this.titleColor = titleColor;
             this.chromaType = chromaType != null ? chromaType : "NONE";
+            this.color2 = color2;
         }
     }
 }

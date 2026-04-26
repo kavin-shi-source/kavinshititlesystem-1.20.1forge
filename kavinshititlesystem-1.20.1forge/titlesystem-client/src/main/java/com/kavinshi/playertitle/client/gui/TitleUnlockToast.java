@@ -11,23 +11,29 @@ import net.minecraft.sounds.SoundEvents;
     value = net.minecraftforge.api.distmarker.Dist.CLIENT
 )
 public final class TitleUnlockToast {
-    private static String currentTitleName = null;
-    private static String currentRarityName = null;
-    private static int currentRarityTier = 0;
-    private static long showTime = 0;
+    private static volatile String currentTitleName = null;
+    private static volatile String currentRarityName = null;
+    private static volatile int currentRarityTier = 0;
+    private static volatile long showTime = 0;
     private static final long SLIDE_IN = 400L;
     private static final long DISPLAY = 4000L;
     private static final long SLIDE_OUT = 400L;
     private static final long TOTAL = SLIDE_IN + DISPLAY + SLIDE_OUT;
 
-    public static void show(String titleName, String rarityName, int rarityTier, int titleColor) {
-        currentTitleName = titleName;
-        currentRarityName = rarityName != null ? rarityName : "Unknown";
+    public static void show(String titleName, String rarityName, int rarityTier) {
         currentRarityTier = rarityTier;
+        currentRarityName = rarityName != null ? rarityName : "Unknown";
+        currentTitleName = titleName;
         showTime = System.currentTimeMillis();
         try {
-            Minecraft.getInstance().getSoundManager()
-                .play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.2f));
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.isSameThread()) {
+                mc.getSoundManager()
+                    .play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.2f));
+            } else {
+                mc.execute(() -> mc.getSoundManager()
+                    .play(net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, 1.2f)));
+            }
         } catch (Exception ignored) {}
     }
 
@@ -51,7 +57,21 @@ public final class TitleUnlockToast {
         int x = (int)(sw - tw + offset * (tw + 12));
         int y = 10;
 
-        ChromaType chroma = ChromaType.values()[Math.min(currentRarityTier, ChromaType.values().length - 1)];
+        ChromaType[] types = ChromaType.values();
+        ChromaType chroma = ChromaType.NONE;
+        for (ChromaType ct : types) {
+            if (ct.getRarityTier() == currentRarityTier) {
+                chroma = ct;
+                break;
+            }
+        }
+        if (chroma == ChromaType.NONE && currentRarityTier > 0) {
+            for (ChromaType ct : types) {
+                if (ct.getRarityTier() <= currentRarityTier && ct.getRarityTier() > chroma.getRarityTier()) {
+                    chroma = ct;
+                }
+            }
+        }
         int accent = chroma.getAccentColor();
 
         g.fill(x, y, x + tw, y + th, 0xD0000000);

@@ -82,13 +82,10 @@ public class LocalEventBus implements ClusterEventBus {
             globalListeners.remove(listener);
             return;
         }
-        Set<EventListener> typeListeners = listeners.get(eventType);
-        if (typeListeners != null) {
+        listeners.computeIfPresent(eventType, (k, typeListeners) -> {
             typeListeners.remove(listener);
-            if (typeListeners.isEmpty()) {
-                listeners.remove(eventType);
-            }
-        }
+            return typeListeners.isEmpty() ? null : typeListeners;
+        });
     }
 
     @Override
@@ -97,12 +94,10 @@ public class LocalEventBus implements ClusterEventBus {
             throw new EventBusException("Listener cannot be null");
         }
         globalListeners.remove(listener);
-        for (Map.Entry<ClusterEventType, Set<EventListener>> entry : listeners.entrySet()) {
+        listeners.entrySet().removeIf(entry -> {
             entry.getValue().remove(listener);
-            if (entry.getValue().isEmpty()) {
-                listeners.remove(entry.getKey());
-            }
-        }
+            return entry.getValue().isEmpty();
+        });
     }
 
     @Override

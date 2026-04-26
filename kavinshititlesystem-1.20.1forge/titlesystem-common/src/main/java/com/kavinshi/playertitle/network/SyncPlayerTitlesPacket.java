@@ -1,6 +1,5 @@
 package com.kavinshi.playertitle.network;
 
-import com.kavinshi.playertitle.title.CustomTitleData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -8,7 +7,7 @@ import java.util.*;
 
 /**
  * 同步玩家标题数据包，用于在客户端和服务器之间同步玩家的完整标题状态。
- * 包含玩家解锁的标题ID、装备的标题ID、击杀计数、存活时间和自定义标题数据。
+ * 包含玩家解锁的标题ID、装备的标题ID、击杀计数、存活时间。
  */
 @SuppressWarnings("null")
 public class SyncPlayerTitlesPacket extends AbstractPacket {
@@ -18,16 +17,16 @@ public class SyncPlayerTitlesPacket extends AbstractPacket {
     private final int equippedTitleId;
     private final Map<String, Integer> killCounts;
     private final int aliveMinutes;
-    private final CustomTitleData customTitle;
+    private final String heading;
 
     public SyncPlayerTitlesPacket(UUID playerId, Set<Integer> unlockedTitleIds, int equippedTitleId,
-                                 Map<String, Integer> killCounts, int aliveMinutes, CustomTitleData customTitle) {
+                                 Map<String, Integer> killCounts, int aliveMinutes, String heading) {
         this.playerId = playerId;
         this.unlockedTitleIds = new HashSet<>(unlockedTitleIds);
         this.equippedTitleId = equippedTitleId;
         this.killCounts = new HashMap<>(killCounts);
         this.aliveMinutes = aliveMinutes;
-        this.customTitle = customTitle;
+        this.heading = heading != null ? heading : "";
     }
 
     public SyncPlayerTitlesPacket(FriendlyByteBuf buffer) {
@@ -50,14 +49,7 @@ public class SyncPlayerTitlesPacket extends AbstractPacket {
         }
 
         this.aliveMinutes = buffer.readVarInt();
-
-        String ctText = readString(buffer);
-        int ctPerm = buffer.readVarInt();
-        int ctColor1 = buffer.readInt();
-        int ctColor2 = buffer.readInt();
-        boolean ctUsing = buffer.readBoolean();
-        long ctLastMod = buffer.readVarLong();
-        this.customTitle = new CustomTitleData(ctText, ctPerm, ctColor1, ctColor2, ctUsing, ctLastMod);
+        this.heading = readString(buffer);
     }
 
     @Override
@@ -78,18 +70,12 @@ public class SyncPlayerTitlesPacket extends AbstractPacket {
         }
 
         buffer.writeVarInt(aliveMinutes);
-
-        writeString(buffer, customTitle.getText());
-        buffer.writeVarInt(customTitle.getPermission());
-        buffer.writeInt(customTitle.getColor1());
-        buffer.writeInt(customTitle.getColor2());
-        buffer.writeBoolean(customTitle.isUsingCustomTitle());
-        buffer.writeVarLong(customTitle.getLastModifiedTime());
+        writeString(buffer, heading);
     }
 
     @Override
     public void handle(NetworkEvent.Context context) {
-        PacketHandlers.handleSyncPlayerTitles(playerId, unlockedTitleIds, equippedTitleId, killCounts, aliveMinutes, customTitle);
+        PacketHandlers.handleSyncPlayerTitles(playerId, unlockedTitleIds, equippedTitleId, killCounts, aliveMinutes, heading);
     }
 
     public UUID getPlayerId() { return playerId; }
@@ -97,7 +83,7 @@ public class SyncPlayerTitlesPacket extends AbstractPacket {
     public int getEquippedTitleId() { return equippedTitleId; }
     public Map<String, Integer> getKillCounts() { return Collections.unmodifiableMap(killCounts); }
     public int getAliveMinutes() { return aliveMinutes; }
-    public CustomTitleData getCustomTitle() { return customTitle; }
+    public String getHeading() { return heading; }
 
     public static SyncPlayerTitlesPacket fromPlayerTitleState(com.kavinshi.playertitle.player.PlayerTitleState state) {
         return new SyncPlayerTitlesPacket(
@@ -106,7 +92,7 @@ public class SyncPlayerTitlesPacket extends AbstractPacket {
             state.getEquippedTitleId(),
             state.getKillCounts(),
             state.getAliveMinutes(),
-            state.getCustomTitle()
+            state.getHeading()
         );
     }
 }

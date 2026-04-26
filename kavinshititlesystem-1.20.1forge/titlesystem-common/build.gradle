@@ -9,8 +9,6 @@ version = mod_version
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(17)
-    withSourcesJar()
-    withJavadocJar()
 }
 
 minecraft {
@@ -33,6 +31,8 @@ dependencies {
     api 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
     api 'com.fasterxml.jackson.core:jackson-core:2.15.2'
     api 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+    api 'com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2'
+    api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
     
     // 测试依赖
     testImplementation platform('org.junit:junit-bom:5.10.2')
@@ -45,8 +45,15 @@ tasks.named('test', Test).configure {
     useJUnitPlatform()
 }
 
+tasks.withType(ProcessResources).configureEach {
+    filesMatching('**/ModConstants.java') {
+        expand 'mod_version': mod_version
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
 }
 
 // 发布配置

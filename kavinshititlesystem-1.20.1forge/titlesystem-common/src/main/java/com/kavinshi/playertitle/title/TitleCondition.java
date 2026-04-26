@@ -8,6 +8,7 @@ public final class TitleCondition {
     private final int requiredCount;
 
     public TitleCondition(TitleConditionType type, String target, int requiredCount) {
+        if (type == null) throw new IllegalArgumentException("TitleCondition type cannot be null");
         this.type = type;
         this.target = target == null ? "" : target;
         this.requiredCount = requiredCount;

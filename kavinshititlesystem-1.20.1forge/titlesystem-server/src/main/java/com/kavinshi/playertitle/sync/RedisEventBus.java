@@ -182,11 +182,19 @@ public class RedisEventBus implements ClusterEventBus {
                 
                 // 启动Redis订阅线程
                 listenerThread = new Thread(() -> {
-                    try (Jedis jedis = jedisPool.getResource()) {
-                        jedis.subscribe(jedisPubSub, getAllChannels());
-                    } catch (Exception e) {
-                        if (running.get()) {
-                            LOGGER.error("Redis subscription thread error: {}", e.getMessage(), e);
+                    while (running.get()) {
+                        try (Jedis jedis = jedisPool.getResource()) {
+                            jedis.subscribe(jedisPubSub, getAllChannels());
+                        } catch (Exception e) {
+                            if (running.get()) {
+                                LOGGER.error("Redis subscription thread error: {}, reconnecting in 5s...", e.getMessage());
+                                try {
+                                    Thread.sleep(5000);
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    break;
+                                }
+                            }
                         }
                     }
                 });
@@ -259,8 +267,7 @@ public class RedisEventBus implements ClusterEventBus {
      * @return 频道数组
      */
     private String[] getAllChannels() {
-        return listeners.keySet().stream()
-            .filter(type -> type != null)
+        return java.util.Arrays.stream(ClusterEventType.values())
             .map(this::getChannelName)
             .toArray(String[]::new);
     }
@@ -271,12 +278,12 @@ public class RedisEventBus implements ClusterEventBus {
      * @param event 事件
      * @return JSON字符串
      */
-    private String serializeEvent(ClusterSyncEvent event) {
+    private String serializeEvent(ClusterSyncEvent event) throws EventBusException {
         try {
             return objectMapper.writeValueAsString(event);
         } catch (Exception e) {
             LOGGER.error("Failed to serialize event: {}", e.getMessage());
-            throw new RuntimeException("Failed to serialize event", e);
+            throw new EventBusException("Failed to serialize event", e);
         }
     }
     

@@ -1,11 +1,6 @@
 package com.kavinshi.playertitle.network;
 
-import com.kavinshi.playertitle.title.TitleAnimationProfile;
-import com.kavinshi.playertitle.title.TitleBuff;
-import com.kavinshi.playertitle.title.TitleCondition;
-import com.kavinshi.playertitle.title.TitleConditionType;
-import com.kavinshi.playertitle.title.TitleDefinition;
-import com.kavinshi.playertitle.title.TitleStyleMode;
+import com.kavinshi.playertitle.title.*;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraftforge.network.NetworkEvent;
 
@@ -101,7 +96,7 @@ public class SyncTitleRegistryPacket extends AbstractPacket {
         String icon = readString(buffer);
         String iconColor = readString(buffer);
 
-        TitleStyleMode styleMode = TitleStyleMode.valueOf(readString(buffer));
+        TitleStyleMode styleMode = TitleParseUtils.safeStyleMode(readString(buffer));
 
         int baseColorCount = buffer.readVarInt();
         List<String> baseColors = new ArrayList<>(baseColorCount);
@@ -120,19 +115,23 @@ public class SyncTitleRegistryPacket extends AbstractPacket {
         int condCount = buffer.readVarInt();
         List<TitleCondition> conditions = new ArrayList<>(condCount);
         for (int i = 0; i < condCount; i++) {
-            TitleConditionType type = TitleConditionType.valueOf(readString(buffer));
+            TitleConditionType type = TitleParseUtils.safeConditionType(readString(buffer));
             String target = readString(buffer);
             int requiredCount = buffer.readVarInt();
-            conditions.add(new TitleCondition(type, target, requiredCount));
+            if (type != null) {
+                conditions.add(new TitleCondition(type, target, requiredCount));
+            }
         }
 
         int buffCount = buffer.readVarInt();
         List<TitleBuff> buffs = new ArrayList<>(buffCount);
         for (int i = 0; i < buffCount; i++) {
-            TitleBuff.BuffType type = TitleBuff.BuffType.valueOf(readString(buffer));
+            TitleBuff.BuffType type = TitleParseUtils.safeBuffType(readString(buffer));
             double value = buffer.readDouble();
             String target = readString(buffer);
-            buffs.add(new TitleBuff(type, value, target));
+            if (type != null) {
+                buffs.add(new TitleBuff(type, value, target));
+            }
         }
 
         return new TitleDefinition(id, name, displayOrder, color, chromaType, conditions,

@@ -1,11 +1,17 @@
 package com.kavinshi.playertitle.service;
 
 import com.kavinshi.playertitle.player.PlayerTitleState;
+import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.sync.ClusterEventBus;
+import com.kavinshi.playertitle.sync.ClusterEventType;
+import com.kavinshi.playertitle.sync.TitleAssignedEvent;
 import com.kavinshi.playertitle.sync.TitleEventFactory;
+import com.kavinshi.playertitle.sync.TitleRemovedEvent;
 import com.kavinshi.playertitle.title.TitleConditionIndex;
 import com.kavinshi.playertitle.title.TitleDefinition;
 import com.kavinshi.playertitle.title.TitleRegistry;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,10 +27,39 @@ public final class TitleProgressService {
 
     private final TitleEventFactory eventFactory;
     private final ClusterEventBus eventBus;
+    private MinecraftServer server;
 
     public TitleProgressService(TitleEventFactory eventFactory, ClusterEventBus eventBus) {
         this.eventFactory = eventFactory;
         this.eventBus = eventBus;
+    }
+
+    public void onServerStarting(MinecraftServer server) {
+        this.server = server;
+
+        try {
+            this.eventBus.subscribe(ClusterEventType.TITLE_ASSIGNED, event -> {
+                if (!(event instanceof TitleAssignedEvent assignedEvent)) return;
+                ServerPlayer player = this.server.getPlayerList().getPlayer(assignedEvent.getPlayerId());
+                if (player == null) return;
+                TitleCapability.get(player).ifPresent(state -> {
+                    state.unlockTitle(assignedEvent.getTitleId());
+                });
+            });
+
+            this.eventBus.subscribe(ClusterEventType.TITLE_REMOVED, event -> {
+                if (!(event instanceof TitleRemovedEvent removedEvent)) return;
+                ServerPlayer player = this.server.getPlayerList().getPlayer(removedEvent.getPlayerId());
+                if (player == null) return;
+                TitleCapability.get(player).ifPresent(state -> {
+                    state.revokeTitle(removedEvent.getTitleId());
+                });
+            });
+
+            LOGGER.info("TitleProgressService cross-server event consumers registered");
+        } catch (ClusterEventBus.EventBusException e) {
+            LOGGER.error("Failed to register TitleProgressService event consumers", e);
+        }
     }
 
     public ProgressUpdateResult recordKill(
@@ -38,12 +73,14 @@ public final class TitleProgressService {
             state.addKill(entityId);
         }
 
-        TitleConditionIndex index = registry.getConditionIndex();
-        if (index != null && entityId != null && !entityId.isBlank() && hostile) {
-            return evaluateUnlocksForKill(state, index, entityId);
+        com.kavinshi.playertitle.objective.UnlockObjectiveEngine engine = new com.kavinshi.playertitle.objective.UnlockObjectiveEngine(registry);
+        List<Integer> unlocked = engine.evaluateKills(state, entityId, hostile);
+        
+        for (int titleId : unlocked) {
+            publishUnlockEvent(state, titleId);
         }
 
-        return evaluateAllUnlocks(state, registry);
+        return toResult(unlocked);
     }
 
     public ProgressUpdateResult recordAliveMinutes(
@@ -53,77 +90,14 @@ public final class TitleProgressService {
     ) {
         state.setAliveMinutes(aliveMinutes);
 
-        TitleConditionIndex index = registry.getConditionIndex();
-        if (index != null) {
-            return evaluateUnlocksForSurvivalTime(state, index);
-        }
-
-        return evaluateAllUnlocks(state, registry);
-    }
-
-    private ProgressUpdateResult evaluateAllUnlocks(PlayerTitleState state, TitleRegistry registry) {
-        TitleConditionIndex index = registry.getConditionIndex();
-        if (index != null) {
-            List<Integer> unlocked = new ArrayList<>();
-            checkEntries(state, index.getAllEntries(), unlocked, new HashSet<>());
-            return toResult(unlocked);
-        }
-
-        List<Integer> unlocked = new ArrayList<>();
-        Map<String, Integer> killCounts = state.getKillCounts();
-        int aliveMinutes = state.getAliveMinutes();
-
-        for (TitleDefinition definition : registry.getAllTitlesSorted()) {
-            if (state.isTitleUnlocked(definition.getId())) {
-                continue;
-            }
-            if (definition.areAllConditionsMet(killCounts, Map.of(), aliveMinutes, 0L)) {
-                state.unlockTitle(definition.getId());
-                unlocked.add(definition.getId());
-                publishUnlockEvent(state, definition.getId());
-            }
+        com.kavinshi.playertitle.objective.UnlockObjectiveEngine engine = new com.kavinshi.playertitle.objective.UnlockObjectiveEngine(registry);
+        List<Integer> unlocked = engine.evaluateSurvival(state);
+        
+        for (int titleId : unlocked) {
+            publishUnlockEvent(state, titleId);
         }
 
         return toResult(unlocked);
-    }
-
-    private ProgressUpdateResult evaluateUnlocksForKill(PlayerTitleState state, TitleConditionIndex index, String entityId) {
-        List<Integer> unlocked = new ArrayList<>();
-        Set<Integer> checked = new HashSet<>();
-        checkEntries(state, index.getTitlesForMobKill(entityId), unlocked, checked);
-        checkEntries(state, index.getTitlesForAnyHostileKill(), unlocked, checked);
-        return toResult(unlocked);
-    }
-
-    private ProgressUpdateResult evaluateUnlocksForSurvivalTime(PlayerTitleState state, TitleConditionIndex index) {
-        List<Integer> unlocked = new ArrayList<>();
-        Set<Integer> checked = new HashSet<>();
-        checkEntries(state, index.getTitlesForSurvivalTime(), unlocked, checked);
-        return toResult(unlocked);
-    }
-
-    private void checkEntries(PlayerTitleState state, List<TitleConditionIndex.IndexEntry> entries,
-                              List<Integer> unlocked, Set<Integer> checked) {
-        Map<String, Integer> killCounts = state.getKillCounts();
-        int aliveMinutes = state.getAliveMinutes();
-
-        for (TitleConditionIndex.IndexEntry entry : entries) {
-            TitleDefinition definition = entry.getDefinition();
-            int titleId = definition.getId();
-
-            if (!checked.add(titleId)) {
-                continue;
-            }
-
-            if (state.isTitleUnlocked(titleId)) {
-                continue;
-            }
-            if (definition.areAllConditionsMet(killCounts, Map.of(), aliveMinutes, 0L)) {
-                state.unlockTitle(titleId);
-                unlocked.add(titleId);
-                publishUnlockEvent(state, titleId);
-            }
-        }
     }
 
     private ProgressUpdateResult toResult(List<Integer> unlocked) {

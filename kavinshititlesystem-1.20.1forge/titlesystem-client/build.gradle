@@ -9,8 +9,6 @@ version = mod_version
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(17)
-    withSourcesJar()
-    withJavadocJar()
 }
 
 minecraft {

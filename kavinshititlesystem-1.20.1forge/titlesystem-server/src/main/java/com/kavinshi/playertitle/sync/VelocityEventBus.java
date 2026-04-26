@@ -3,6 +3,9 @@ package com.kavinshi.playertitle.sync;
 import com.kavinshi.playertitle.network.ClusterSyncPacket;
 import com.kavinshi.playertitle.network.NetworkHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.server.ServerLifecycleHooks;
@@ -24,7 +27,10 @@ public class VelocityEventBus implements ClusterEventBus {
 
     private final String channelName;
     private final String serverName;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = JsonMapper.builder()
+        .addModule(new ParameterNamesModule())
+        .addModule(new JavaTimeModule())
+        .build();
 
     public VelocityEventBus(String channelName, String serverName) {
         this.channelName = channelName != null ? channelName : "playertitle:cluster";
@@ -57,14 +63,20 @@ public class VelocityEventBus implements ClusterEventBus {
 
             var playerList = server.getPlayerList().getPlayers();
             if (playerList.isEmpty()) {
-                LOGGER.warn("Cannot publish - no online players to carry the message");
+                LOGGER.debug("No online players to carry cluster message, event {} will be dropped", event.getEventType());
                 return;
             }
 
-            ServerPlayer carrier = playerList.get(0);
-            NetworkHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> carrier), packet);
+            for (ServerPlayer carrier : playerList) {
+                try {
+                    NetworkHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> carrier), packet);
+                    break;
+                } catch (Exception e) {
+                    LOGGER.debug("Failed to send via player {}, trying next", carrier.getName().getString());
+                }
+            }
 
-            LOGGER.debug("Published {} via player {}", event.getEventType(), carrier.getName().getString());
+            LOGGER.debug("Published {} via Velocity plugin message", event.getEventType());
         } catch (Exception e) {
             throw new EventBusException("Failed to publish event via Velocity plugin message", e);
         }
@@ -117,19 +129,7 @@ public class VelocityEventBus implements ClusterEventBus {
     }
 
     private ClusterSyncEvent deserializeEvent(ClusterEventType eventType, String payload) {
-        try {
-            return switch (eventType) {
-                case TITLE_ASSIGNED -> objectMapper.readValue(payload, TitleAssignedEvent.class);
-                case TITLE_REMOVED -> objectMapper.readValue(payload, TitleRemovedEvent.class);
-                case TITLE_UPDATED -> objectMapper.readValue(payload, TitleUpdatedEvent.class);
-                case TITLE_PROGRESS_UPDATED -> objectMapper.readValue(payload, TitleProgressUpdatedEvent.class);
-                case TITLE_EQUIP_STATE_CHANGED -> objectMapper.readValue(payload, TitleEquipStateChangedEvent.class);
-                case SERVER_ANNOUNCEMENT -> objectMapper.readValue(payload, ServerAnnouncementEvent.class);
-            };
-        } catch (Exception e) {
-            LOGGER.error("Deserialization error: {}", e.getMessage());
-            return null;
-        }
+        return ClusterEventType.deserialize(payload);
     }
 
     @Override
@@ -141,9 +141,7 @@ public class VelocityEventBus implements ClusterEventBus {
     @Override
     public void subscribeAll(EventListener listener) throws EventBusException {
         if (listener == null) throw new EventBusException("listener cannot be null");
-        for (ClusterEventType eventType : ClusterEventType.values()) {
-            listeners.computeIfAbsent(eventType, k -> new CopyOnWriteArraySet<>()).add(listener);
-        }
+        listeners.computeIfAbsent(null, k -> new CopyOnWriteArraySet<>()).add(listener);
     }
 
     @Override

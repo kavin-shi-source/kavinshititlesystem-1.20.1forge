@@ -6,7 +6,8 @@ import org.slf4j.LoggerFactory;
 
 public final class TabModDetector {
     private static final Logger LOGGER = LoggerFactory.getLogger(TabModDetector.class);
-    private static Boolean cached = null;
+    private static volatile Boolean cached = null;
+    private static final Object DETECT_LOCK = new Object();
 
     private static final String[] TAB_MOD_IDS = {
         "tab", "bettertab", "tabby", "vanillatweaks", "vt",
@@ -18,14 +19,19 @@ public final class TabModDetector {
 
     public static boolean hasTabMod() {
         if (cached == null) {
-            for (String modId : TAB_MOD_IDS) {
-                if (ModList.get().isLoaded(modId)) {
-                    cached = true;
-                    LOGGER.info("Tab plugin detected: {}, skipping custom tab list modifications", modId);
-                    return cached;
+            synchronized (DETECT_LOCK) {
+                if (cached == null) {
+                    boolean found = false;
+                    for (String modId : TAB_MOD_IDS) {
+                        if (ModList.get().isLoaded(modId)) {
+                            LOGGER.info("Tab plugin detected: {}, skipping custom tab list modifications", modId);
+                            found = true;
+                            break;
+                        }
+                    }
+                    cached = found;
                 }
             }
-            cached = false;
         }
         return cached;
     }

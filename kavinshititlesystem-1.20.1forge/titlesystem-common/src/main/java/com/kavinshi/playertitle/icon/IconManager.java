@@ -18,9 +18,8 @@ import org.slf4j.LoggerFactory;
 public class IconManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(IconManager.class);
     private final Path configDirectory;
-    private final Map<String, IconDefinition> iconsById = new ConcurrentHashMap<>();
-    private final Map<Character, IconDefinition> iconsByChar = new ConcurrentHashMap<>();
-    private char nextUnicodeChar = 0xE000; // 私有使用区起始
+    private volatile IconSnapshot iconSnapshot = IconSnapshot.EMPTY;
+    private char nextUnicodeChar = 0xE000;
 
     public IconManager(Path configDirectory) {
         this.configDirectory = configDirectory;
@@ -40,7 +39,6 @@ public class IconManager {
 
         Map<String, IconDefinition> newIcons = new HashMap<>();
         
-        // 扫描所有PNG文件（大小写不敏感）
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(configDirectory)) {
             for (Path file : stream) {
                 String fileName = file.getFileName().toString().toLowerCase();
@@ -49,16 +47,13 @@ public class IconManager {
                 }
                 
                 try {
-                    String iconId = fileName.substring(0, fileName.length() - 4); // 移除.png后缀
+                    String iconId = fileName.substring(0, fileName.length() - 4);
                     String iconName = iconId.replace('_', ' ');
                     
-                    // 分配唯一的Unicode字符
                     char unicodeChar = allocateUnicodeChar();
                     
-                    // 读取PNG尺寸
                     ImageDimensions dimensions = readImageDimensions(file);
                     
-                    // 创建图标定义
                     IconDefinition icon = new IconDefinition(
                         iconId,
                         iconName,
@@ -66,68 +61,46 @@ public class IconManager {
                         unicodeChar,
                         dimensions.width(),
                         dimensions.height(),
-                        dimensions.height(), // ascent = height
-                        -dimensions.height() / 4 // descent = -height/4
+                        dimensions.height(),
+                        -dimensions.height() / 4
                     );
                     
                     newIcons.put(iconId, icon);
                 } catch (IOException e) {
-                    // 单个PNG文件解析失败，跳过继续处理其他文件
                     LOGGER.warn("Failed to parse PNG file: {}, error: {}", file, e.getMessage());
                 }
             }
         }
         
-        // 原子性更新图标映射
-        updateIconMaps(newIcons);
+        Map<String, IconDefinition> newById = Map.copyOf(newIcons);
+        Map<Character, IconDefinition> newByChar = new HashMap<>();
+        for (IconDefinition icon : newIcons.values()) {
+            newByChar.put(icon.getUnicodeChar(), icon);
+        }
+        iconSnapshot = new IconSnapshot(newById, Map.copyOf(newByChar));
     }
 
     /**
      * 清空图标映射。
      */
     private void clearIconMaps() {
-        iconsById.clear();
-        iconsByChar.clear();
+        iconSnapshot = IconSnapshot.EMPTY;
     }
 
-    /**
-     * 原子性更新图标映射。
-     */
-    private void updateIconMaps(Map<String, IconDefinition> newIcons) {
-        iconsById.clear();
-        iconsByChar.clear();
-        iconsById.putAll(newIcons);
-        for (IconDefinition icon : newIcons.values()) {
-            iconsByChar.put(icon.getUnicodeChar(), icon);
-        }
-    }
-
-    /**
-     * 获取所有图标的不可变视图。
-     */
     public Map<String, IconDefinition> getAllIcons() {
-        return Collections.unmodifiableMap(iconsById);
+        return Collections.unmodifiableMap(iconSnapshot.iconsById);
     }
 
-    /**
-     * 获取已加载图标的总数。
-     */
     public int getIconCount() {
-        return iconsById.size();
+        return iconSnapshot.iconsById.size();
     }
 
-    /**
-     * 根据ID获取图标定义。
-     */
     public IconDefinition getIcon(String id) {
-        return iconsById.get(id);
+        return iconSnapshot.iconsById.get(id);
     }
 
-    /**
-     * 根据Unicode字符获取图标定义。
-     */
     public IconDefinition getIconByChar(char unicodeChar) {
-        return iconsByChar.get(unicodeChar);
+        return iconSnapshot.iconsByChar.get(unicodeChar);
     }
 
     /**
@@ -186,4 +159,15 @@ public class IconManager {
      * 图像尺寸记录。
      */
     private record ImageDimensions(int width, int height) {}
+
+    private static final class IconSnapshot {
+        static final IconSnapshot EMPTY = new IconSnapshot(Map.of(), Map.of());
+        final Map<String, IconDefinition> iconsById;
+        final Map<Character, IconDefinition> iconsByChar;
+
+        IconSnapshot(Map<String, IconDefinition> iconsById, Map<Character, IconDefinition> iconsByChar) {
+            this.iconsById = iconsById;
+            this.iconsByChar = iconsByChar;
+        }
+    }
 }

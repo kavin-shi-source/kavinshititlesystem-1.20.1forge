@@ -1,9 +1,16 @@
 package com.kavinshi.playertitle.service;
 
+import com.kavinshi.playertitle.handler.BuffHandler;
 import com.kavinshi.playertitle.player.PlayerTitleState;
+import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.sync.ClusterEventBus;
+import com.kavinshi.playertitle.sync.ClusterEventType;
+import com.kavinshi.playertitle.sync.TitleEquipStateChangedEvent;
 import com.kavinshi.playertitle.sync.TitleEventFactory;
+import com.kavinshi.playertitle.sync.TitleRemovedEvent;
 import com.kavinshi.playertitle.title.TitleRegistry;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,16 +24,52 @@ public final class TitleEquipService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TitleEquipService.class);
     private final TitleEventFactory eventFactory;
     private final ClusterEventBus eventBus;
-    
-    /**
-     * 创建称号装备服务。
-     *
-     * @param eventFactory 事件工厂
-     * @param eventBus 事件总线
-     */
+    private MinecraftServer server;
+
     public TitleEquipService(TitleEventFactory eventFactory, ClusterEventBus eventBus) {
         this.eventFactory = eventFactory;
         this.eventBus = eventBus;
+    }
+
+    public void onServerStarting(MinecraftServer server) {
+        this.server = server;
+
+        try {
+            this.eventBus.subscribe(ClusterEventType.TITLE_EQUIP_STATE_CHANGED, event -> {
+                if (!(event instanceof TitleEquipStateChangedEvent equipEvent)) return;
+                ServerPlayer player = this.server.getPlayerList().getPlayer(equipEvent.getPlayerId());
+                if (player == null) return;
+                TitleCapability.get(player).ifPresent(state -> {
+                    int previousTitleId = state.getEquippedTitleId();
+                    if (previousTitleId >= 0) {
+                        BuffHandler.removeBuffs(player, previousTitleId);
+                    }
+                    if (equipEvent.isEquipped()) {
+                        state.setEquippedTitleId(equipEvent.getTitleId());
+                        BuffHandler.applyBuffs(player, equipEvent.getTitleId());
+                    } else {
+                        state.setEquippedTitleId(-1);
+                    }
+                    state.markClean();
+                });
+            });
+
+            this.eventBus.subscribe(ClusterEventType.TITLE_REMOVED, event -> {
+                if (!(event instanceof TitleRemovedEvent removedEvent)) return;
+                ServerPlayer player = this.server.getPlayerList().getPlayer(removedEvent.getPlayerId());
+                if (player == null) return;
+                TitleCapability.get(player).ifPresent(state -> {
+                    if (state.getEquippedTitleId() == removedEvent.getTitleId()) {
+                        state.setEquippedTitleId(-1);
+                        state.markClean();
+                    }
+                });
+            });
+
+            LOGGER.info("TitleEquipService cross-server event consumers registered");
+        } catch (ClusterEventBus.EventBusException e) {
+            LOGGER.error("Failed to register TitleEquipService event consumers", e);
+        }
     }
     
     /**

@@ -10,6 +10,7 @@ public final class TitleBuff {
     private final String target;
 
     public TitleBuff(BuffType type, double value, String target) {
+        if (type == null) throw new IllegalArgumentException("TitleBuff type cannot be null");
         this.type = type;
         this.value = value;
         this.target = target == null ? "" : target;

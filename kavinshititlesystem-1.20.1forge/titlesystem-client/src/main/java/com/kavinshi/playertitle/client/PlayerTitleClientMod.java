@@ -1,15 +1,18 @@
 package com.kavinshi.playertitle.client;
 
+import com.kavinshi.playertitle.ModConstants;
 import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.network.PacketHandlers;
 import com.kavinshi.playertitle.network.RequestSyncPacket;
 import com.kavinshi.playertitle.title.TitleDefinition;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 @Mod("playertitleclient")
 /**
@@ -18,7 +21,7 @@ import org.slf4j.Logger;
  */
 public final class PlayerTitleClientMod {
     public static final String MOD_ID = "playertitleclient";
-    public static final Logger LOGGER = LogUtils.getLogger();
+    public static final Logger LOGGER = LoggerFactory.getLogger(PlayerTitleClientMod.class);
 
     public PlayerTitleClientMod() {
         NetworkHandler.init();
@@ -30,10 +33,9 @@ public final class PlayerTitleClientMod {
     private void registerClientPacketHandlers() {
         PacketHandlers.registerSyncPlayerTitlesHandler(ctx -> {
             ClientTitleData.updatePlayerData(ctx.equippedTitleId, ctx.unlockedTitleIds,
-                ctx.killCounts, ctx.aliveMinutes, ctx.customTitle);
-            LOGGER.debug("Synced player titles: equipped={}, unlocked={}, custom={}",
-                ctx.equippedTitleId, ctx.unlockedTitleIds.size(),
-                ctx.customTitle != null ? ctx.customTitle.getPermissionName() : "null");
+                ctx.killCounts, ctx.aliveMinutes, ctx.heading);
+            LOGGER.debug("Synced player titles: equipped={}, unlocked={}, heading={}",
+                ctx.equippedTitleId, ctx.unlockedTitleIds.size(), ctx.heading);
         });
 
         PacketHandlers.registerSyncTitleRegistryHandler(ctx -> {
@@ -44,10 +46,26 @@ public final class PlayerTitleClientMod {
         PacketHandlers.registerTitleUpdateClientHandler(ctx -> {
             switch (ctx.updateType) {
                 case TITLE_EQUIPPED -> {
-                    String name = findTitleName(ctx.titleId);
-                    int color = findTitleColor(ctx.titleId);
-                    String chroma = findTitleChroma(ctx.titleId);
-                    ClientTitleData.updatePlayerEquippedTitle(ctx.playerId, ctx.titleId, name, color, chroma);
+                    TitleDefinition def = ClientTitleData.getTitleById(ctx.titleId);
+                    String name = def != null ? def.getName() : "";
+                    int color = def != null ? def.getColor() : ModConstants.DEFAULT_COLOR;
+                    String chroma = def != null ? def.getChromaType() : "NONE";
+                    int color2;
+                    if (def == null) {
+                        color2 = 0xFFFFFF;
+                    } else {
+                        List<String> baseColors = def.getBaseColors();
+                        if (baseColors != null && baseColors.size() >= 2) {
+                            try {
+                                color2 = Integer.parseInt(baseColors.get(1).replace("#", ""), 16);
+                            } catch (NumberFormatException e) {
+                                color2 = def.getColor();
+                            }
+                        } else {
+                            color2 = def.getColor();
+                        }
+                    }
+                    ClientTitleData.updatePlayerEquippedTitle(ctx.playerId, ctx.titleId, name, color, chroma, color2);
                 }
                 case TITLE_UNLOCKED -> ClientTitleData.addUnlockedTitle(ctx.titleId);
                 case TITLE_REVOKED -> ClientTitleData.removeUnlockedTitle(ctx.titleId);
@@ -57,11 +75,11 @@ public final class PlayerTitleClientMod {
         });
     }
 
-    @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
+    @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
     public static class ClientEvents {
         @SubscribeEvent
-        public static void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event) {
-            var player = Minecraft.getInstance().player;
+        public static void onPlayerJoin(ClientPlayerNetworkEvent.LoggingIn event) {
+            var player = event.getPlayer();
             if (player != null) {
                 NetworkHandler.getChannel().sendToServer(new RequestSyncPacket(player.getUUID(), true));
                 LOGGER.debug("Sent sync request for player: {}", player.getUUID());
@@ -69,21 +87,4 @@ public final class PlayerTitleClientMod {
         }
     }
 
-    private static String findTitleName(int titleId) {
-        for (TitleDefinition def : ClientTitleData.getTitleRegistry())
-            if (def.getId() == titleId) return def.getName();
-        return "";
-    }
-
-    private static int findTitleColor(int titleId) {
-        for (TitleDefinition def : ClientTitleData.getTitleRegistry())
-            if (def.getId() == titleId) return def.getColor();
-        return 0xFFFFFF;
-    }
-
-    private static String findTitleChroma(int titleId) {
-        for (TitleDefinition def : ClientTitleData.getTitleRegistry())
-            if (def.getId() == titleId) return def.getChromaType();
-        return "NONE";
-    }
 }

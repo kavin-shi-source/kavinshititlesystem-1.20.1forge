@@ -13,6 +13,7 @@ public final class TitleDefinition {
     private final int displayOrder;
     private final int color;
     private final String chromaType;
+    private final ChromaType chromaTypeEnum;
     private final List<TitleCondition> conditions;
     private final List<TitleBuff> buffs;
     private final String description;
@@ -41,7 +42,8 @@ public final class TitleDefinition {
         this.displayOrder = displayOrder;
         this.color = color;
         this.chromaType = chromaType == null ? "NONE" : chromaType;
-        this.conditions = List.copyOf(conditions);
+        this.chromaTypeEnum = ChromaType.fromString(this.chromaType);
+        this.conditions = conditions == null ? List.of() : List.copyOf(conditions);
         this.buffs = buffs == null ? List.of() : List.copyOf(buffs);
         this.description = description == null ? "" : description;
         this.category = category == null ? "default" : category;
@@ -64,7 +66,7 @@ public final class TitleDefinition {
     /** 返回色彩类型字符串。 */
     public String getChromaType() { return this.chromaType; }
     /** 返回色彩类型枚举。 */
-    public ChromaType getChromaTypeEnum() { return ChromaType.fromString(this.chromaType); }
+    public ChromaType getChromaTypeEnum() { return this.chromaTypeEnum; }
     /** 检查是否具有染色效果。 */
     public boolean hasChroma() { return getChromaTypeEnum().hasChroma(); }
     /** 返回解锁条件列表。 */
@@ -104,13 +106,13 @@ public final class TitleDefinition {
      * @param uuidKillCounts UUID生物击杀计数映射
      * @param aliveMinutes 存活时间（分钟）
      * @param bounty 赏金数量
-     * @return 如果所有条件都满足则返回true，如果没有任何条件则返回false
+     * @return 如果所有条件都满足则返回true，如果没有任何条件则返回true（无条件限制视为已满足）
      */
     public boolean areAllConditionsMet(Map<String, Integer> killCounts,
                                         Map<String, Integer> uuidKillCounts,
                                         int aliveMinutes, long bounty) {
         if (this.conditions.isEmpty()) {
-            return false;
+            return true;
         }
         return this.conditions.stream()
             .allMatch(condition -> condition.isMet(killCounts, uuidKillCounts, aliveMinutes, bounty));

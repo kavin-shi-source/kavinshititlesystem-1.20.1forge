@@ -10,21 +10,23 @@ import net.minecraftforge.client.event.RenderGuiEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 @SuppressWarnings("null")
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
 public final class ChatHeadRenderer {
     private static final int MAX_TRACKED = 20;
-    private static final LinkedList<TrackedMessage> tracked = new LinkedList<>();
+    private static final ConcurrentLinkedQueue<TrackedMessage> tracked = new ConcurrentLinkedQueue<>();
 
     @SubscribeEvent
     public static void onChatReceived(ClientChatReceivedEvent event) {
         UUID uuid = extractUUID(event.getMessage());
         if (uuid != null) {
-            tracked.addFirst(new TrackedMessage(uuid));
-            while (tracked.size() > MAX_TRACKED) tracked.removeLast();
+            tracked.add(new TrackedMessage(uuid));
+            while (tracked.size() > MAX_TRACKED) tracked.poll();
         }
     }
 
@@ -32,21 +34,25 @@ public final class ChatHeadRenderer {
     public static void onRenderGui(RenderGuiEvent.Post event) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || tracked.isEmpty()) return;
+        if (mc.getConnection() == null) return;
 
+        List<TrackedMessage> snapshot = new ArrayList<>(tracked);
         GuiGraphics g = event.getGuiGraphics();
-        int chatBottom = g.guiHeight() - 40;
+        int chatBottom = mc.getWindow().getGuiScaledHeight() - 40;
         int lineH = 9;
-        int visibleCount = Math.min(tracked.size(), 10);
+        int visibleCount = Math.min(snapshot.size(), 10);
+        int drawIndex = 0;
 
         for (int i = 0; i < visibleCount; i++) {
-            TrackedMessage msg = tracked.get(i);
+            TrackedMessage msg = snapshot.get(i);
             if (msg.uuid.equals(mc.player.getUUID())) continue;
 
             PlayerInfo info = mc.getConnection().getPlayerInfo(msg.uuid);
             if (info == null) continue;
 
-            int y = chatBottom - (i + 1) * lineH;
+            int y = chatBottom - (drawIndex + 1) * lineH;
             renderHead(g, info, 2, y);
+            drawIndex++;
         }
     }
 

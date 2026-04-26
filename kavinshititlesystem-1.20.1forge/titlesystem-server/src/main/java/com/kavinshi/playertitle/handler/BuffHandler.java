@@ -13,17 +13,29 @@ import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
 @Mod.EventBusSubscriber(bus = Mod.EventBusSubscriber.Bus.FORGE)
 public final class BuffHandler {
 
-    private static final long UUID_BASE_MSB = 0x00000000_0000_0000L;
-    private static final long UUID_BASE_LSB = 0x0000_0000_0000_0001L;
+    private static volatile TitleRegistry cachedRegistry;
+
+    public static void setRegistry(TitleRegistry registry) {
+        cachedRegistry = registry;
+    }
+
+    private static TitleRegistry getRegistry() {
+        TitleRegistry reg = cachedRegistry;
+        if (reg != null) return reg;
+        reg = com.kavinshi.playertitle.bootstrap.RewriteBootstrap.getInstance().getTitleRegistry();
+        cachedRegistry = reg;
+        return reg;
+    }
 
     public static void applyBuffs(Player player, int titleId) {
-        TitleRegistry registry = com.kavinshi.playertitle.bootstrap.RewriteBootstrap.getInstance().getTitleRegistry();
+        TitleRegistry registry = getRegistry();
         TitleDefinition title = registry.getTitle(titleId);
         if (title == null) return;
 
@@ -32,7 +44,7 @@ public final class BuffHandler {
             Attribute attribute = getAttribute(buff.getType());
             if (attribute == null) continue;
 
-            UUID modifierUuid = new UUID(UUID_BASE_MSB, UUID_BASE_LSB + ((long) titleId << 16) + i);
+            UUID modifierUuid = generateBuffUuid(titleId, i);
             AttributeModifier.Operation op = buff.getType() == TitleBuff.BuffType.SPEED
                     ? AttributeModifier.Operation.MULTIPLY_BASE
                     : AttributeModifier.Operation.ADDITION;
@@ -46,7 +58,7 @@ public final class BuffHandler {
     }
 
     public static void removeBuffs(Player player, int titleId) {
-        TitleRegistry registry = com.kavinshi.playertitle.bootstrap.RewriteBootstrap.getInstance().getTitleRegistry();
+        TitleRegistry registry = getRegistry();
         TitleDefinition title = registry.getTitle(titleId);
         if (title == null) return;
 
@@ -55,7 +67,7 @@ public final class BuffHandler {
             Attribute attribute = getAttribute(buff.getType());
             if (attribute == null) continue;
 
-            UUID modifierUuid = new UUID(UUID_BASE_MSB, UUID_BASE_LSB + ((long) titleId << 16) + i);
+            UUID modifierUuid = generateBuffUuid(titleId, i);
             var attributeInstance = player.getAttribute(attribute);
             if (attributeInstance != null) {
                 attributeInstance.removeModifier(modifierUuid);
@@ -67,7 +79,7 @@ public final class BuffHandler {
     public static void onLivingDamage(LivingDamageEvent event) {
         if (!(event.getSource().getEntity() instanceof Player player)) return;
 
-        TitleRegistry registry = com.kavinshi.playertitle.bootstrap.RewriteBootstrap.getInstance().getTitleRegistry();
+        TitleRegistry registry = getRegistry();
         int equippedId = TitleCapability.get(player)
                 .map(state -> state.getEquippedTitleId())
                 .orElse(-1);
@@ -83,8 +95,8 @@ public final class BuffHandler {
         for (TitleBuff buff : buffs) {
             if (buff.getType() == TitleBuff.BuffType.DAMAGE_MULTIPLIER && buff.appliesToTarget(targetType)) {
                 float multiplier = (float) buff.getValue();
-                float newDamage = event.getAmount() * multiplier;
-                event.setAmount(newDamage);
+                event.setAmount(event.getAmount() * multiplier);
+                break;
             }
         }
     }
@@ -99,5 +111,10 @@ public final class BuffHandler {
             case LUCK -> Attributes.LUCK;
             default -> null;
         };
+    }
+
+    private static UUID generateBuffUuid(int titleId, int buffIndex) {
+        return UUID.nameUUIDFromBytes(
+            ("playertitle-buff-" + titleId + "-" + buffIndex).getBytes(StandardCharsets.UTF_8));
     }
 }

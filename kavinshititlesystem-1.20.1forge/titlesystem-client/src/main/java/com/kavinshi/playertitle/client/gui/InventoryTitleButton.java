@@ -52,21 +52,6 @@ public final class InventoryTitleButton {
         graphics.drawString(mc.font, label, bx + (18 - labelW) / 2, by + 5, 0xFFF0E6D5, false);
     }
 
-    @SubscribeEvent
-    public static void onMouseClick(ScreenEvent.MouseButtonPressed.Pre event) {
-        if (!(event.getScreen() instanceof InventoryScreen)) return;
-        if (event.getButton() != 0) return;
-        double mx = event.getMouseX(), my = event.getMouseY();
-        int guiLeft = event.getScreen().width / 2 - 88;
-        int guiTop = event.getScreen().height / 2 - 100;
-        int bx = guiLeft + 176 + 4;
-        int by = guiTop + 4;
-        if (mx >= bx && mx < bx + 18 && my >= by && my < by + 18) {
-            openTitleScreen();
-            event.setCanceled(true);
-        }
-    }
-
     private static void openTitleScreen() {
         Minecraft.getInstance().setScreen(new TitleScreen());
     }

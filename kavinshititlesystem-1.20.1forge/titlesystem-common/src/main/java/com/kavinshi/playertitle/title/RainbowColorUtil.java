@@ -3,24 +3,42 @@ package com.kavinshi.playertitle.title;
 public final class RainbowColorUtil {
     private RainbowColorUtil() {}
 
+    private static volatile long cachedTimeMillis = System.currentTimeMillis();
+
+    public static void updateCachedTime() {
+        cachedTimeMillis = System.currentTimeMillis();
+    }
+
+    public static long getCachedTimeMillis() {
+        return cachedTimeMillis;
+    }
+
     public static int getChromaColorForChar(ChromaType type, int charIndex, int totalChars) {
+        return getChromaColorForChar(type, charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getChromaColorForChar(ChromaType type, int charIndex, int totalChars, long timeMillis) {
         return switch (type) {
-            case RAINBOW -> getRainbowColorForChar(charIndex, totalChars);
-            case WHITE_GRAY -> getWhiteGrayChroma(charIndex, totalChars);
-            case GREEN_WHITE -> getGreenWhiteChroma(charIndex, totalChars);
-            case CYAN_WHITE -> getCyanWhiteChroma(charIndex, totalChars);
-            case BLUE_WHITE -> getBlueWhiteChroma(charIndex, totalChars);
-            case BLACK_WHITE -> getBlackWhiteChroma(charIndex, totalChars);
-            case RED_BLACK -> getRedBlackChroma(charIndex, totalChars);
-            case DARK_RED_PURPLE -> getDarkRedPurpleChroma(charIndex, totalChars);
-            case GOLD_BLACK -> getGoldBlackChroma(charIndex, totalChars);
+            case RAINBOW -> getRainbowColorForChar(charIndex, totalChars, timeMillis);
+            case WHITE_GRAY -> getWhiteGrayChroma(charIndex, totalChars, timeMillis);
+            case GREEN_WHITE -> getGreenWhiteChroma(charIndex, totalChars, timeMillis);
+            case CYAN_WHITE -> getCyanWhiteChroma(charIndex, totalChars, timeMillis);
+            case BLUE_WHITE -> getBlueWhiteChroma(charIndex, totalChars, timeMillis);
+            case BLACK_WHITE -> getBlackWhiteChroma(charIndex, totalChars, timeMillis);
+            case RED_BLACK -> getRedBlackChroma(charIndex, totalChars, timeMillis);
+            case DARK_RED_PURPLE -> getDarkRedPurpleChroma(charIndex, totalChars, timeMillis);
+            case GOLD_BLACK -> getGoldBlackChroma(charIndex, totalChars, timeMillis);
             case CUSTOM_GRADIENT -> 0xFFFFFF;
             default -> 0xFFFFFF;
         };
     }
 
     public static int getGradientColorForChar(int color1, int color2, int charIndex, int totalChars) {
-        float time = (float) (System.currentTimeMillis() % 2000L) / 2000.0f;
+        return getGradientColorForChar(color1, color2, charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getGradientColorForChar(int color1, int color2, int charIndex, int totalChars, long timeMillis) {
+        float time = (float) (timeMillis % 2000L) / 2000.0f;
         float charOffset = (float) charIndex / Math.max(totalChars, 1) * 0.5f;
         float blend = (float) (Math.sin((time + charOffset) * Math.PI * 2.0) * 0.5 + 0.5);
 
@@ -33,56 +51,92 @@ public final class RainbowColorUtil {
     }
 
     public static int getRainbowColorForChar(int charIndex, int totalChars) {
+        return getRainbowColorForChar(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getRainbowColorForChar(int charIndex, int totalChars, long timeMillis) {
         float offset = (float) charIndex / Math.max(totalChars, 1) * 0.5f;
-        float hue = ((float) (System.currentTimeMillis() % 1500L) / 1500.0f + offset) % 1.0f;
+        float hue = ((float) (timeMillis % 1500L) / 1500.0f + offset) % 1.0f;
         return hsbToRgb(hue, 1.0f, 1.0f);
     }
 
     public static int getWhiteGrayChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getWhiteGrayChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getWhiteGrayChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int gray = (int) (187.0f + 68.0f * blend);
         return gray << 16 | gray << 8 | gray;
     }
 
     public static int getGreenWhiteChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getGreenWhiteChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getGreenWhiteChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int r = (int) (85.0f + 170.0f * blend);
         return r << 16 | 255 << 8 | r;
     }
 
     public static int getCyanWhiteChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getCyanWhiteChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getCyanWhiteChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int r = (int) (85.0f + 170.0f * blend);
         return r << 16 | 255 << 8 | 255;
     }
 
     public static int getBlueWhiteChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getBlueWhiteChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getBlueWhiteChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int r = (int) (85.0f + 170.0f * blend);
         return r << 16 | r << 8 | 255;
     }
 
     public static int getBlackWhiteChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getBlackWhiteChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getBlackWhiteChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int gray = (int) (17.0f + 238.0f * blend);
         return gray << 16 | gray << 8 | gray;
     }
 
     public static int getRedBlackChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getRedBlackChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getRedBlackChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int r = (int) (51.0f + 204.0f * blend);
         return r << 16;
     }
 
     public static int getDarkRedPurpleChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getDarkRedPurpleChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getDarkRedPurpleChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int r = (int) (128.0f + 11.0f * blend);
         int b = (int) (128.0f * (1.0f - blend));
         return r << 16 | b;
     }
 
     public static int getGoldBlackChroma(int charIndex, int totalChars) {
-        float blend = getBlend(charIndex, totalChars);
+        return getGoldBlackChroma(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    public static int getGoldBlackChroma(int charIndex, int totalChars, long timeMillis) {
+        float blend = getBlend(charIndex, totalChars, timeMillis);
         int r = (int) (17.0f + 238.0f * blend);
         int g = (int) (17.0f + 198.0f * blend);
         int b = (int) (17.0f * (1.0f - blend));
@@ -90,7 +144,11 @@ public final class RainbowColorUtil {
     }
 
     private static float getBlend(int charIndex, int totalChars) {
-        float time = (float) (System.currentTimeMillis() % 1500L) / 1500.0f;
+        return getBlend(charIndex, totalChars, cachedTimeMillis);
+    }
+
+    private static float getBlend(int charIndex, int totalChars, long timeMillis) {
+        float time = (float) (timeMillis % 1500L) / 1500.0f;
         float charOffset = (float) charIndex / Math.max(totalChars, 1) * 0.3f;
         return (float) (Math.sin((time + charOffset) * Math.PI * 2.0) * 0.5 + 0.5);
     }

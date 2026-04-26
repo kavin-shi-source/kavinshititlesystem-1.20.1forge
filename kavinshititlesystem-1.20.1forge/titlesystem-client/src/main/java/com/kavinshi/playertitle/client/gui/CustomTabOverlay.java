@@ -2,7 +2,6 @@ package com.kavinshi.playertitle.client.gui;
 
 import com.kavinshi.playertitle.client.ClientTitleData;
 import com.kavinshi.playertitle.title.ChromaType;
-import com.kavinshi.playertitle.title.CustomTitleData;
 import com.kavinshi.playertitle.util.TabModDetector;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -29,9 +28,6 @@ public final class CustomTabOverlay {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return 0;
         boolean isSelf = playerId.equals(mc.player.getUUID());
-        if (isSelf && ClientTitleData.isUsingCustomTitle()) {
-            return ClientTitleData.getCustomTitle().getEffectiveChromaType().getRarityTier();
-        }
         ClientTitleData.EquippedTitleInfo info = ClientTitleData.getEquippedTitleForPlayer(playerId);
         if (info != null) {
             return ChromaType.fromString(info.chromaType).getRarityTier();
@@ -50,6 +46,7 @@ public final class CustomTabOverlay {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onRenderPost(RenderGuiEvent.Post event) {
+        com.kavinshi.playertitle.title.RainbowColorUtil.updateCachedTime();
         if (hasTabMod()) return;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
@@ -106,19 +103,14 @@ public final class CustomTabOverlay {
             String titleName = null;
             ChromaType chroma = ChromaType.NONE;
             int titleColor = 0xFFFFFF;
+            int titleColor2 = 0xFFFFFF;
 
-            if (isSelf && ClientTitleData.isUsingCustomTitle()) {
-                CustomTitleData ct = ClientTitleData.getCustomTitle();
-                titleName = ct.getText();
-                chroma = ct.getEffectiveChromaType();
-                titleColor = ct.getColor1();
-            } else {
-                ClientTitleData.EquippedTitleInfo titleInfo = ClientTitleData.getEquippedTitleForPlayer(playerUuid);
-                if (titleInfo != null && titleInfo.titleId >= 0) {
-                    titleName = titleInfo.titleName;
-                    chroma = ChromaType.fromString(titleInfo.chromaType);
-                    titleColor = titleInfo.titleColor;
-                }
+            ClientTitleData.EquippedTitleInfo titleInfo = ClientTitleData.getEquippedTitleForPlayer(playerUuid);
+            if (titleInfo != null && titleInfo.titleId >= 0) {
+                titleName = titleInfo.titleName;
+                chroma = ChromaType.fromString(titleInfo.chromaType);
+                titleColor = titleInfo.titleColor;
+                titleColor2 = titleInfo.color2;
             }
 
             try {
@@ -130,25 +122,34 @@ public final class CustomTabOverlay {
             if (titleName != null && !titleName.isEmpty()) {
                 int badgeBg = chroma.getBadgeBgColor();
                 int badgeBorder = chroma.getBadgeBorderColor();
-                String shortName = titleName.length() > 6 ? titleName.substring(0, 6) : titleName;
+                int maxBadgeWidth = 50;
+                String shortName = titleName;
+                while (font.width(shortName) + 4 > maxBadgeWidth && shortName.length() > 1) {
+                    shortName = shortName.substring(0, shortName.length() - 1);
+                }
                 int badgeW = font.width(shortName) + 4;
                 graphics.fill(nameX - 1, y - 1, nameX + badgeW + 1, y + 9, badgeBorder);
                 graphics.fill(nameX, y, nameX + badgeW, y + 8, badgeBg);
 
-                if (chroma == ChromaType.CUSTOM_GRADIENT && isSelf) {
-                    CustomTitleData ct = ClientTitleData.getCustomTitle();
+                if (chroma == ChromaType.CUSTOM_GRADIENT) {
+                    int c1 = titleColor;
+                    int c2 = titleColor2;
+                    int cx = nameX + 2;
                     for (int ci = 0; ci < shortName.length(); ci++) {
                         int cColor = com.kavinshi.playertitle.title.RainbowColorUtil
-                            .getGradientColorForChar(ct.getColor1(), ct.getColor2(), ci, shortName.length());
-                        graphics.drawString(font, String.valueOf(shortName.charAt(ci)),
-                            nameX + 2 + ci * font.width("W"), y, cColor | 0xFF000000, false);
+                            .getGradientColorForChar(c1, c2, ci, shortName.length());
+                        String ch = String.valueOf(shortName.charAt(ci));
+                        graphics.drawString(font, ch, cx, y, cColor | 0xFF000000, false);
+                        cx += font.width(ch);
                     }
                 } else if (chroma.hasChroma()) {
+                    int cx = nameX + 2;
                     for (int ci = 0; ci < shortName.length(); ci++) {
                         int cColor = com.kavinshi.playertitle.title.RainbowColorUtil
                             .getChromaColorForChar(chroma, ci, shortName.length());
-                        graphics.drawString(font, String.valueOf(shortName.charAt(ci)),
-                            nameX + 2 + ci * font.width("W"), y, cColor | 0xFF000000, false);
+                        String ch = String.valueOf(shortName.charAt(ci));
+                        graphics.drawString(font, ch, cx, y, cColor | 0xFF000000, false);
+                        cx += font.width(ch);
                     }
                 } else {
                     graphics.drawString(font, shortName, nameX + 2, y,
@@ -163,8 +164,7 @@ public final class CustomTabOverlay {
         }
 
         int days = (int)(mc.level.getDayTime() / 24000L);
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("HH:mm");
-        String timeStr = sdf.format(new java.util.Date());
+        String timeStr = java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
         String footerStr = "Day " + days + " | " + timeStr;
         int footerY = sh - 12;
         graphics.drawString(font, footerStr, (sw - font.width(footerStr)) / 2, footerY, 0xFF84847A, false);

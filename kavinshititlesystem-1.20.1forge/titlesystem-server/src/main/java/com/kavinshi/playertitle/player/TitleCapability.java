@@ -56,14 +56,6 @@ public final class TitleCapability {
             data.setKillCounts(restored.getKillCounts());
             data.setAliveMinutes(restored.getAliveMinutes());
             data.setEquippedTitleId(restored.getEquippedTitleId());
-            data.setCustomTitlePermission(restored.getCustomTitle().getPermission());
-            if (restored.getCustomTitle().hasPermission()) {
-                data.setCustomTitleText(restored.getCustomTitle().getText());
-                data.setCustomTitleColor1(restored.getCustomTitle().getColor1());
-                data.setCustomTitleColor2(restored.getCustomTitle().getColor2());
-                data.setUsingCustomTitle(restored.getCustomTitle().isUsingCustomTitle());
-                data.getCustomTitle().setLastModifiedTime(restored.getCustomTitle().getLastModifiedTime());
-            }
             data.markClean();
         }
     }

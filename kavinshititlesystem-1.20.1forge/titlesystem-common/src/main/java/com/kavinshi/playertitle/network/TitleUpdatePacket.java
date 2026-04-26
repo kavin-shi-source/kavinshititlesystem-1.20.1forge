@@ -20,7 +20,7 @@ public class TitleUpdatePacket extends AbstractPacket {
         public int getId() { return id; }
         public static UpdateType fromId(int id) {
             for (UpdateType type : values()) if (type.id == id) return type;
-            return TITLE_UNLOCKED;
+            return null;
         }
     }
 
@@ -52,7 +52,8 @@ public class TitleUpdatePacket extends AbstractPacket {
 
     public TitleUpdatePacket(FriendlyByteBuf buffer) {
         this.playerId = buffer.readUUID();
-        this.updateType = UpdateType.fromId(buffer.readVarInt());
+        UpdateType type = UpdateType.fromId(buffer.readVarInt());
+        this.updateType = type != null ? type : UpdateType.TITLE_UNLOCKED;
         this.titleId = buffer.readVarInt();
         this.entityId = readString(buffer);
         this.count = buffer.readVarInt();

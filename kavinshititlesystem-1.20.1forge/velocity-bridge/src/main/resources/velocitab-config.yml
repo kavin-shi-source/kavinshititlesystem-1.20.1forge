@@ -1,0 +1,98 @@
+# === Velocitab 配置集成示例 ===
+# PlayerTitle 称号系统与 Velocitab 联动的配置参考
+#
+# 将此文件复制到 plugins/Velocitab/config.yml 并重启代理
+# 前置要求：
+#   1. MiniPlaceholders 插件已安装
+#   2. PlayerTitle Cluster Bridge 插件已安装
+#   3. titlesystem-server (Forge Mod) 已安装到所有后端服务器
+#
+# 占位符说明（通过 MiniPlaceholders 桥接）：
+#   %mini_playertitle_title%          - 当前装备的称号名称（自定义或系统）
+#   %mini_playertitle_titleName%      - 系统称号名称（若使用自定义则返回空）
+#   %mini_playertitle_playerName%     - 玩家名称
+#   %mini_playertitle_serverName%     - 玩家所在的服务器名称
+#   %mini_playertitle_hasTitle%       - 是否有称号（true/false）
+
+# === 基本设置 ===
+# 启用定期检查更新
+check_for_updates: false
+
+# === 服务器组配置 ===
+# 可以为不同服务器组设置不同的 TAB 显示格式
+servers:
+  # 默认配置，适用于所有未单独配置的服务器
+  default:
+    # 是否启用在 TAB 列表中显示头尾部
+    enabled: true
+    
+    # TAB 列表头部（支持 MiniPlaceholders 占位符）
+    header:
+      - "<gradient:#FF6B6B:#4ECDC4>✦ PlayerTitle 服务器 ✦</gradient>"
+      - "<gray>━━━━━━━━━━━━━━━━━━━━━━━</gray>"
+      - ""
+    
+    # TAB 列表尾部
+    footer:
+      - ""
+      - "<gray>━━━━━━━━━━━━━━━━━━━━━━━</gray>"
+      - "<yellow>在线玩家: <white>%online%</white></yellow>"
+      - "<aqua>当前服务器: <white>%server%</white></aqua>"
+    
+    # TAB 列表中每一行的格式
+    # %player% - 玩家名称（将通过 MiniPlaceholders 注入称号）
+    tab_list_format:
+      - "%mini_playertitle_title%<dark_gray> </dark_gray>%player%"
+    
+    # 是否按服务器分组显示玩家
+    group_players: true
+    
+    # 显示所有服务器还是仅当前服务器
+    show_all_players: true
+
+  # 大厅服务器单独配置示例
+  lobby:
+    enabled: true
+    header:
+      - "<gradient:#FFD700:#FFA500>✦ 大 厅 服 务 器 ✦</gradient>"
+      - "<gray>━━━━━━━━━━━━━━━━━━━━━━━</gray>"
+    footer:
+      - ""
+      - "<gray>━━━━━━━━━━━━━━━━━━━━━━━</gray>"
+      - "<green>大厅在线: <white>%online%</white></green>"
+    tab_list_format:
+      - "%mini_playertitle_title%<dark_gray> </dark_gray>%player%"
+    group_players: false
+    show_all_players: true
+
+  # 生存服务器单独配置示例
+  survival:
+    enabled: true
+    header:
+      - "<gradient:#90EE90:#006400>✦ 生 存 服 务 器 ✦</gradient>"
+      - "<gray>━━━━━━━━━━━━━━━━━━━━━━━</gray>"
+    footer:
+      - ""
+      - "<gray>━━━━━━━━━━━━━━━━━━━━━━━</gray>"
+      - "<green>生存在线: <white>%online%</white></green>"
+    tab_list_format:
+      - "%mini_playertitle_title%<dark_gray> </dark_gray>%player%"
+    group_players: false
+    show_all_players: true
+
+# === 排序规则 ===
+# 玩家在 TAB 列表中的排序方式
+sort_players:
+  # 是否启用排序
+  enabled: true
+  # 排序类型: GROUP, PERMISSION, NONE
+  type: PERMISSION
+
+# === 其他设置 ===
+# 是否在玩家加入时发送欢迎消息
+join_message:
+  enabled: false
+
+# 是否在玩家离开时发送离开消息
+quit_message:
+  enabled: false

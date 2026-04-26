@@ -1,23 +1,18 @@
 package com.kavinshi.playertitle.player;
 
-import com.kavinshi.playertitle.title.CustomTitleData;
-
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-
-@SuppressWarnings("null")
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class PlayerTitleState {
     private final UUID playerId;
-    private final Set<Integer> unlockedTitles = new HashSet<>();
-    private final Map<String, Integer> killCounts = new HashMap<>();
-    private int equippedTitleId = -1;
-    private int aliveMinutes;
+    private final Set<Integer> unlockedTitles = ConcurrentHashMap.newKeySet();
+    private final Map<String, Integer> killCounts = new ConcurrentHashMap<>();
+    private volatile int equippedTitleId = -1;
+    private volatile int aliveMinutes;
+    private String heading = "";
     private boolean dirty = true;
-    private final CustomTitleData customTitle = new CustomTitleData();
 
     public PlayerTitleState(UUID playerId) {
         this.playerId = playerId;
@@ -86,6 +81,15 @@ public final class PlayerTitleState {
         }
     }
 
+    public String getHeading() {
+        return this.heading;
+    }
+
+    public void setHeading(String heading) {
+        this.heading = heading != null ? heading : "";
+        this.dirty = true;
+    }
+
     public void unlockTitle(int titleId) {
         if (this.unlockedTitles.add(titleId)) {
             this.dirty = true;
@@ -97,48 +101,6 @@ public final class PlayerTitleState {
             if (this.equippedTitleId == titleId) {
                 this.equippedTitleId = -1;
             }
-            this.dirty = true;
-        }
-    }
-
-    public CustomTitleData getCustomTitle() {
-        return this.customTitle;
-    }
-
-    public void setCustomTitlePermission(int permission) {
-        if (this.customTitle.getPermission() != permission) {
-            this.customTitle.setPermission(permission);
-            if (permission < CustomTitleData.PERMISSION_GRADIENT) {
-                this.customTitle.setColor2(this.customTitle.getColor1());
-            }
-            if (permission == CustomTitleData.PERMISSION_NONE) {
-                this.customTitle.setUsingCustomTitle(false);
-            }
-            this.dirty = true;
-        }
-    }
-
-    public void setCustomTitleText(String text) {
-        this.customTitle.setText(text);
-        this.customTitle.setLastModifiedTime(System.currentTimeMillis());
-        this.dirty = true;
-    }
-
-    public void setCustomTitleColor1(int color) {
-        this.customTitle.setColor1(color);
-        this.customTitle.setLastModifiedTime(System.currentTimeMillis());
-        this.dirty = true;
-    }
-
-    public void setCustomTitleColor2(int color) {
-        this.customTitle.setColor2(color);
-        this.customTitle.setLastModifiedTime(System.currentTimeMillis());
-        this.dirty = true;
-    }
-
-    public void setUsingCustomTitle(boolean using) {
-        if (this.customTitle.isUsingCustomTitle() != using) {
-            this.customTitle.setUsingCustomTitle(using);
             this.dirty = true;
         }
     }
