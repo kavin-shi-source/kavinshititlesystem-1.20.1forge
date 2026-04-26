@@ -5,7 +5,20 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public final class TitleDisplayHelper {
+
+    private static final Pattern ICON_PATTERN = Pattern.compile("\\[icon:([a-zA-Z0-9_]+)\\]");
+    private static final Map<String, String> ICON_REGISTRY = new HashMap<>();
+
+    static {
+        // Register image icons to their unicode mappings here
+        ICON_REGISTRY.put("title_1", "\uE001");
+    }
 
     private TitleDisplayHelper() {}
 
@@ -26,6 +39,21 @@ public final class TitleDisplayHelper {
     }
 
     public static MutableComponent createTitleComponent(String name, int color, ChromaType chromaType, int color2) {
+        if (name == null || name.isEmpty()) {
+            return Component.empty();
+        }
+
+        // Check if it's an icon format like [icon:title_1]
+        Matcher matcher = ICON_PATTERN.matcher(name);
+        if (matcher.matches()) {
+            String iconKey = matcher.group(1);
+            String unicodeChar = ICON_REGISTRY.get(iconKey);
+            if (unicodeChar != null) {
+                // Return the icon without brackets, and forced to white color to prevent tinting the image
+                return Component.literal(unicodeChar).withStyle(s -> s.withColor(TextColor.fromRgb(0xFFFFFF)));
+            }
+        }
+
         int frameColor = chromaType.getFrameColor();
         MutableComponent bracket = Component.literal("[ ").withStyle(s -> s.withColor(TextColor.fromRgb(frameColor)));
         MutableComponent closeBracket = Component.literal(" ]").withStyle(s -> s.withColor(TextColor.fromRgb(frameColor)));

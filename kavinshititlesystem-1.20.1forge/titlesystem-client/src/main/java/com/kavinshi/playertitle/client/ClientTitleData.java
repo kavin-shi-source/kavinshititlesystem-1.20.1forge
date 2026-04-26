@@ -86,6 +86,9 @@ public final class ClientTitleData {
         List<TitleDefinition> immutableList = Collections.unmodifiableList(new ArrayList<>(titles));
         Map<Integer, TitleDefinition> index = new HashMap<>(titles.size());
         for (TitleDefinition def : titles) {
+            if (index.containsKey(def.getId())) {
+                org.slf4j.LoggerFactory.getLogger(ClientTitleData.class).warn("Duplicate title ID: {}", def.getId());
+            }
             index.put(def.getId(), def);
         }
         Map<Integer, TitleDefinition> immutableIndex = Collections.unmodifiableMap(index);
