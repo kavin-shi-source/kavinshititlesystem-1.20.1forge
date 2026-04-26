@@ -26,7 +26,10 @@ public final class JoinLeaveHandler {
             MutableComponent titleComp = TitleDisplayHelper.buildTitleComponent(state, registry);
             if (titleComp == null) return;
 
-            event.setCanceled(true);
+            // PlayerLoggedInEvent is not cancelable in Forge 1.20.1.
+            // If you want to change the join message, you need to use a different approach or event (like ServerMessageEvent),
+            // or simply broadcast the custom message alongside the default one for now.
+            // event.setCanceled(true);
 
             MutableComponent joinMessage = Component.literal("")
                     .append(titleComp)

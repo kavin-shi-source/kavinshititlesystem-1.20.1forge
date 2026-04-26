@@ -43,6 +43,13 @@ dependencies {
     // 依赖common模块
     implementation project(':titlesystem-common')
     
+    // JSON序列化 (必须打包到Jar中)
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+    implementation 'com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+    
     // 测试依赖
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
@@ -80,9 +87,21 @@ processResources {
 }
 
 jar {
+    dependsOn project(':titlesystem-common').tasks.named('jar')
+    
     from(project(':titlesystem-common').sourceSets.main.output) {
         exclude 'META-INF/**'
     }
+    
+    // 把依赖库直接打入jar包中（简单的uber-jar处理）
+    from {
+        configurations.runtimeClasspath.findAll { it.name.contains('jackson') }.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
+        exclude 'META-INF/versions/**' // 避免多版本类冲突
+        exclude 'module-info.class' // 避免多模块定义冲突
+    }
+    
     manifest {
         attributes([
             'Specification-Title'   : mod_name,

@@ -23,6 +23,8 @@ dependencies {
 
     implementation 'com.zaxxer:HikariCP:5.0.1'
     implementation 'mysql:mysql-connector-java:8.0.33'
+    implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
+    implementation 'com.moandjiezana.toml:toml4j:0.7.2'
     implementation 'io.javalin:javalin:5.6.3'
     implementation 'com.auth0:java-jwt:4.4.0'
     implementation 'org.slf4j:slf4j-simple:2.0.7'
@@ -52,7 +54,9 @@ shadowJar {
     relocate 'com.zaxxer.hikari', 'com.kavinshi.playertitle.lib.hikari'
     relocate 'io.javalin', 'com.kavinshi.playertitle.lib.javalin'
     relocate 'com.auth0.jwt', 'com.kavinshi.playertitle.lib.jwt'
-    // mysql is a JDBC driver, better not relocate it unless absolutely necessary.
+    
+    // Explicitly merge service providers (META-INF/services) so SPIs like java.sql.Driver aren't overwritten
+    mergeServiceFiles()
 }
 
 build.dependsOn shadowJar

@@ -27,12 +27,13 @@ dependencies {
     // Minecraft/Forge API (仅编译时可用)
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
     
-    // JSON序列化
-    api 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
-    api 'com.fasterxml.jackson.core:jackson-core:2.15.2'
-    api 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
-    api 'com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2'
-    api 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
+    // JSON序列化 (编译时依赖，运行时如果需要，应使用jar in jar或者由其他模组提供)
+    // Forge环境下，客户端或服务端需要单独shade这些依赖。这里使用 compileOnly，但在实际运行中可能需要通过 Forge 机制或 ShadowJar 打包
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations:2.15.2'
+    implementation 'com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
     
     // 测试依赖
     testImplementation platform('org.junit:junit-bom:5.10.2')

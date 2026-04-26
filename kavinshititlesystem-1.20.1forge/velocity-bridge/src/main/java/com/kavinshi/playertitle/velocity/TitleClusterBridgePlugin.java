@@ -43,7 +43,7 @@ public class TitleClusterBridgePlugin {
     private final Path dataDirectory;
     private final TitleCache titleCache;
     private final TitlePlaceholdersExpansion placeholders;
-    private volatile BridgeConfig config = new BridgeConfig(0xAAAAAA);
+    private volatile BridgeConfig config = new BridgeConfig(0xAAAAAA, true, "localhost", 3306, "playertitle", "root", "", 5000L, true);
 
     private MinecraftChannelIdentifier clusterId;
     private MinecraftChannelIdentifier dataId;
@@ -72,13 +72,17 @@ public class TitleClusterBridgePlugin {
 
         proxy.getChannelRegistrar().register(clusterId, dataId, chatId);
 
+        // 注册 MiniPlaceholders 扩展
+        if (proxy.getPluginManager().getPlugin("miniplaceholders").isPresent()) {
+            placeholders.register();
+            logger.info("MiniPlaceholders expansion registered.");
+        } else {
+            logger.warn("MiniPlaceholders not found! Placeholders will not be registered.");
+        }
+
         // 初始化数据库、服务和 API
         try {
-            dbManager = new DatabaseManager(
-                "jdbc:mysql://127.0.0.1:3306/playertitle_test?useSSL=false&serverTimezone=UTC", 
-                "root", 
-                "root"
-            );
+            dbManager = new DatabaseManager(config, dataDirectory);
             headingService = new HeadingService(dbManager, titleCache);
             restServer = new RestServer(8080, "test-secret-key-replace-in-prod", headingService);
             logger.info("Database and REST API initialized");

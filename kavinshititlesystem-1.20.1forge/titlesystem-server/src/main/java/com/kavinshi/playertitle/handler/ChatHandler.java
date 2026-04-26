@@ -48,23 +48,27 @@ public final class ChatHandler {
             String colorCode = MinecraftColors.toSectionCode(RewriteBootstrap.getInstance().getClusterConfig().getServerNameColor());
             MutableComponent serverComponent = Component.literal(colorCode + "[" + serverName + "]\u00A7r");
 
-            MutableComponent prefix = Component.literal("")
-                    .append(serverComponent)
-                    .append(Component.literal("-"));
+            MutableComponent prefix = Component.literal("");
             
             String heading = state.getHeading();
             if (!heading.isEmpty()) {
-                prefix.append(Component.literal("[" + heading + "]"));
+                prefix.append(Component.literal("[" + heading + "]-"));
             }
             
             if (titleComponent != null) {
-                prefix.append(titleComponent);
+                prefix.append(titleComponent).append(Component.literal("-"));
             }
             
-            prefix.append(Component.literal(" "));
+            prefix.append(serverComponent).append(Component.literal("-"));
 
-            // Update the message in the event instead of cancelling it to preserve signatures
-            event.setMessage(prefix.append(event.getMessage()));
+            MutableComponent finalChat = Component.literal("")
+                    .append(prefix)
+                    .append(rawDisplayName)
+                    .append(Component.literal(" : "))
+                    .append(event.getMessage());
+
+            event.setCanceled(true);
+            player.getServer().getPlayerList().broadcastSystemMessage(finalChat, false);
         });
     }
 

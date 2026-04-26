@@ -1,8 +1,10 @@
 package com.kavinshi.playertitle.velocity;
 
 import com.velocitypowered.api.proxy.Player;
+import io.github.miniplaceholders.api.Expansion;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.minimessage.tag.Tag;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -10,9 +12,46 @@ import java.util.UUID;
 public final class TitlePlaceholdersExpansion {
 
     private final TitleCache cache;
+    private Expansion expansion;
 
     public TitlePlaceholdersExpansion(TitleCache cache) {
         this.cache = cache;
+    }
+
+    public void register() {
+        expansion = Expansion.builder("playertitle")
+            .filter(Player.class)
+            .audiencePlaceholder("title", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(Component.text(getTitle(player.getUniqueId())));
+            })
+            .audiencePlaceholder("titleName", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(Component.text(getTitleName(player.getUniqueId())));
+            })
+            .audiencePlaceholder("playerName", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(Component.text(getPlayerName(player.getUniqueId())));
+            })
+            .audiencePlaceholder("serverName", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(Component.text(getServerName(player.getUniqueId())));
+            })
+            .audiencePlaceholder("hasTitle", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(Component.text(String.valueOf(hasTitle(player.getUniqueId()))));
+            })
+            .audiencePlaceholder("heading", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(Component.text(getHeading(player.getUniqueId())));
+            })
+            .audiencePlaceholder("display", (aud, queue, ctx) -> {
+                Player player = (Player) aud;
+                return Tag.inserting(createFullDisplayComponent(player));
+            })
+            .build();
+            
+        expansion.register();
     }
 
     public String getTitle(UUID playerId) {

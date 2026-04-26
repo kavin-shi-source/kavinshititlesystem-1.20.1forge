@@ -1,0 +1,34 @@
+server-name-color = "gray"
+
+[database]
+# Whether to use MySQL (true) or SQLite (false, requires SQLite dependency)
+# Allowed values: true, false - Default: true
+useMysql = false
+
+# MySQL host
+# Allowed length: 1 ~ 255 - Default: 'localhost'
+mysqlHost = "localhost"
+
+# MySQL port
+# Allowed range: 1 ~ 65535 - Default: 3306
+mysqlPort = 3306
+
+# MySQL database
+# Allowed length: 1 ~ 255 - Default: 'database'
+mysqlDatabase = "playertitle"
+
+# MySQL username
+# Allowed length: 1 ~ 255 - Default: 'username'
+mysqlUsername = "root"
+
+# MySQL password
+# Allowed length: 1 ~ 255 - Default: 'password'
+mysqlPassword = ""
+
+# MySQL timeout
+# Allowed range: 1 ~ 60000 - Default: 5000
+mysqlTimeout = 5000
+
+# Whether to use indexes (improves inspect/lookup speed)
+# Allowed values: true, false - Default: true
+useIndexes = true

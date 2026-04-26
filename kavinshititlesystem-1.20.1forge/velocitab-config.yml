@@ -1,0 +1,31 @@
+# ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+# ┃      Velocitab TabGroups     ┃
+# ┃    Developed by William278   ┃
+# ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+# ┣╸ Information: https://william278.net/project/velocitab
+# ┗╸ Documentation: https://william278.net/docs/velocitab
+
+groups:
+- name: default
+  headers:
+  - |-
+    <gold><bold>汉堡农场</bold></gold>
+    <gray>在线 [<green>%players_online%</green><gray>/</gray><green>%max_players_online%</green>]</gray>
+    <dark_gray>────────────────</dark_gray>
+  footers:
+  - |-
+    <dark_gray>────────────────</dark_gray>
+    <gray>汉堡农场 —— 一个温馨的玩家社区</gray>
+  format: '%mini_playertitle_heading% %mini_playertitle_title% %username%'
+  nametag:
+    prefix: '%mini_playertitle_heading% %mini_playertitle_title% '
+    suffix: ''
+  servers:
+  - create
+  - main
+  - limbo
+  sorting_placeholders:
+  - '%role_weight%'
+  - '%username_lower%'
+  header_footer_update_rate: 1000
+  placeholder_update_rate: 1000

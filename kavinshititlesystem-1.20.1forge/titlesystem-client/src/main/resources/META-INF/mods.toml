@@ -10,7 +10,6 @@ authors="${mod_authors}"
 description='''
 ${mod_description}
 Client-side module for player title rendering and icon display.
-Requires the server-side module (playertitleserver) to provide title data.
 '''
 
 [[dependencies.playertitleclient]]
@@ -24,12 +23,5 @@ side="CLIENT"
 modId="minecraft"
 mandatory=true
 versionRange="[${minecraft_version},1.21)"
-ordering="NONE"
-side="CLIENT"
-
-[[dependencies.playertitleclient]]
-modId="playertitleserver"
-mandatory=true
-versionRange="[1.0,)"
 ordering="NONE"
 side="CLIENT"

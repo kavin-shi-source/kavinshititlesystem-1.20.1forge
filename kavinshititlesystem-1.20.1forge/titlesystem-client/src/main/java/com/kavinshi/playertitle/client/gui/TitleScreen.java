@@ -31,12 +31,12 @@ import java.util.Set;
 public class TitleScreen extends Screen {
     private static final Logger LOGGER = LoggerFactory.getLogger(TitleScreen.class);
     private static final int GUI_WIDTH = 370;
-    private static final int GUI_HEIGHT = 260;
+    private static final int GUI_HEIGHT = 205;
     private static final int LIST_WIDTH = 175;
     private static final int ENTRY_HEIGHT = 20;
     private static final int MARGIN = 14;
     private static final int DIVIDER_X = 195;
-    private static final int CUSTOM_PANEL_HEIGHT = 55;
+    private static final int CUSTOM_PANEL_HEIGHT = 0;
 
     private int guiLeft;
     private int guiTop;
@@ -180,21 +180,6 @@ public class TitleScreen extends Screen {
         String prefix = "#" + displayNumber + " ";
         int textX = x + 7;
 
-        if (!title.getIcon().isEmpty()) {
-            try {
-                ResourceLocation iconLoc = ResourceLocation.tryParse(title.getIcon());
-                if (iconLoc != null) {
-                    int iconTexW = 85;
-                    int iconTexH = 16;
-                    float scale = (float)(ENTRY_HEIGHT - 1) / iconTexH;
-                    int drawW = Math.round(iconTexW * scale);
-                    int drawH = ENTRY_HEIGHT - 1;
-                    graphics.blit(iconLoc, textX, y + 1, drawW, drawH, 0, 0, iconTexW, iconTexH, iconTexW, iconTexH);
-                    textX += drawW + 2;
-                }
-            } catch (Exception ignored) {}
-        }
-
         if (isUnlocked) {
             graphics.drawString(font, prefix, textX, y + 6, 0xFF84847A, false);
             int prefixWidth = font.width(prefix);
@@ -285,18 +270,6 @@ public class TitleScreen extends Screen {
         int maxScroll;
         try {
         int infoY = contentTopY - detailScrollOffset;
-
-        if (!title.getIcon().isEmpty()) {
-            try {
-                ResourceLocation iconLoc = ResourceLocation.tryParse(title.getIcon());
-                if (iconLoc != null) {
-                    int detailIconW = 85;
-                    int detailIconH = 16;
-                    graphics.blit(iconLoc, x, infoY, detailIconW, detailIconH, 0, 0, detailIconW, detailIconH, detailIconW, detailIconH);
-                    infoY += detailIconH + 4;
-                }
-            } catch (Exception ignored) {}
-        }
 
         if (title.getDescription() != null && !title.getDescription().isEmpty()) {
             graphics.drawString(font, "\u25b8 Description:", x, infoY, 0xFFD4A017, false);
