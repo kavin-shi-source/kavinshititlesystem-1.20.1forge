@@ -45,9 +45,6 @@ dependencies {
     // 依赖common模块
     implementation project(':titlesystem-common')
     
-    // Redis客户端
-    implementation 'redis.clients:jedis:5.0.0'
-    
     // JSON序列化 (必须打包到Jar中)
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
@@ -64,7 +61,6 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.mockito:mockito-core:5.5.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.5.0'
-    testImplementation 'com.github.fppt:jedis-mock:1.0.8' // Redis模拟
 }
 
 tasks.named('test', Test).configure {
@@ -106,10 +102,9 @@ jar {
     
     // 把依赖库直接打入jar包中（简单的uber-jar处理）
     from {
-        configurations.runtimeClasspath.findAll { it.name.contains('jackson') || it.name.contains('jedis') }.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtimeClasspath.findAll { it.name.contains('jackson') || it.name.contains('HikariCP') || it.name.contains('sqlite-jdbc') }.collect { it.isDirectory() ? it : zipTree(it) }
     } {
         exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-        exclude 'META-INF/versions/**' // 避免多版本类冲突
         exclude 'module-info.class' // 避免多模块定义冲突
     }
     

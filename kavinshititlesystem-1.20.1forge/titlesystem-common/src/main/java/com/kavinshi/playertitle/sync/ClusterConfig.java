@@ -4,9 +4,6 @@ import com.kavinshi.playertitle.title.MinecraftColors;
 
 public class ClusterConfig {
     private final ClusterMode mode;
-    private final String redisHost;
-    private final int redisPort;
-    private final String redisPassword;
     private final String velocityHost;
     private final int velocityPort;
     private final String channelName;
@@ -16,9 +13,6 @@ public class ClusterConfig {
 
     private ClusterConfig(Builder builder) {
         this.mode = builder.mode;
-        this.redisHost = builder.redisHost;
-        this.redisPort = builder.redisPort;
-        this.redisPassword = builder.redisPassword;
         this.velocityHost = builder.velocityHost;
         this.velocityPort = builder.velocityPort;
         this.channelName = builder.channelName;
@@ -37,18 +31,6 @@ public class ClusterConfig {
 
     public ClusterMode getMode() {
         return mode;
-    }
-
-    public String getRedisHost() {
-        return redisHost;
-    }
-
-    public int getRedisPort() {
-        return redisPort;
-    }
-
-    public String getRedisPassword() {
-        return redisPassword;
     }
 
     public String getVelocityHost() {
@@ -87,9 +69,6 @@ public class ClusterConfig {
 
     public static class Builder {
         private ClusterMode mode = ClusterMode.LOCAL;
-        private String redisHost = "localhost";
-        private int redisPort = 6379;
-        private String redisPassword = null;
         private String velocityHost = "localhost";
         private int velocityPort = 25577;
         private String channelName = "playertitle:sync";
@@ -101,9 +80,6 @@ public class ClusterConfig {
 
         public Builder(ClusterConfig config) {
             this.mode = config.mode;
-            this.redisHost = config.redisHost;
-            this.redisPort = config.redisPort;
-            this.redisPassword = config.redisPassword;
             this.velocityHost = config.velocityHost;
             this.velocityPort = config.velocityPort;
             this.channelName = config.channelName;
@@ -114,21 +90,6 @@ public class ClusterConfig {
 
         public Builder mode(ClusterMode mode) {
             this.mode = mode;
-            return this;
-        }
-
-        public Builder redisHost(String redisHost) {
-            this.redisHost = redisHost;
-            return this;
-        }
-
-        public Builder redisPort(int redisPort) {
-            this.redisPort = redisPort;
-            return this;
-        }
-
-        public Builder redisPassword(String redisPassword) {
-            this.redisPassword = redisPassword;
             return this;
         }
 
@@ -169,23 +130,6 @@ public class ClusterConfig {
 
     public static ClusterConfig defaultConfig() {
         return builder().build();
-    }
-
-    public static ClusterConfig redisConfig(String host, int port) {
-        return builder()
-            .mode(ClusterMode.REDIS)
-            .redisHost(host)
-            .redisPort(port)
-            .build();
-    }
-
-    public static ClusterConfig redisConfig(String host, int port, String password) {
-        return builder()
-            .mode(ClusterMode.REDIS)
-            .redisHost(host)
-            .redisPort(port)
-            .redisPassword(password)
-            .build();
     }
 
     public static ClusterConfig velocityConfig(String serverName) {

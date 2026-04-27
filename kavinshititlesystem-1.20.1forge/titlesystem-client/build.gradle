@@ -95,10 +95,9 @@ jar {
     
     // 把依赖库直接打入jar包中（简单的uber-jar处理）
     from {
-        configurations.runtimeClasspath.findAll { it.name.contains('jackson') }.collect { it.isDirectory() ? it : zipTree(it) }
+        configurations.runtimeClasspath.findAll { it.name.contains('jackson') || it.name.contains('HikariCP') || it.name.contains('sqlite-jdbc') }.collect { it.isDirectory() ? it : zipTree(it) }
     } {
         exclude 'META-INF/*.RSA', 'META-INF/*.SF', 'META-INF/*.DSA'
-        exclude 'META-INF/versions/**' // 避免多版本类冲突
         exclude 'module-info.class' // 避免多模块定义冲突
     }
     

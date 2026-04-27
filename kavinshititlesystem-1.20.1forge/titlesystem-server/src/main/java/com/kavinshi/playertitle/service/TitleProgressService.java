@@ -27,11 +27,13 @@ public final class TitleProgressService {
 
     private final TitleEventFactory eventFactory;
     private final ClusterEventBus eventBus;
+    private final com.kavinshi.playertitle.objective.UnlockObjectiveEngine objectiveEngine;
     private MinecraftServer server;
 
-    public TitleProgressService(TitleEventFactory eventFactory, ClusterEventBus eventBus) {
+    public TitleProgressService(TitleEventFactory eventFactory, ClusterEventBus eventBus, TitleRegistry registry) {
         this.eventFactory = eventFactory;
         this.eventBus = eventBus;
+        this.objectiveEngine = new com.kavinshi.playertitle.objective.UnlockObjectiveEngine(registry);
     }
 
     public void onServerStarting(MinecraftServer server) {
@@ -73,8 +75,7 @@ public final class TitleProgressService {
             state.addKill(entityId);
         }
 
-        com.kavinshi.playertitle.objective.UnlockObjectiveEngine engine = new com.kavinshi.playertitle.objective.UnlockObjectiveEngine(registry);
-        List<Integer> unlocked = engine.evaluateKills(state, entityId, hostile);
+        List<Integer> unlocked = this.objectiveEngine.evaluateKills(state, entityId, hostile);
         
         for (int titleId : unlocked) {
             publishUnlockEvent(state, titleId);
@@ -90,8 +91,7 @@ public final class TitleProgressService {
     ) {
         state.setAliveMinutes(aliveMinutes);
 
-        com.kavinshi.playertitle.objective.UnlockObjectiveEngine engine = new com.kavinshi.playertitle.objective.UnlockObjectiveEngine(registry);
-        List<Integer> unlocked = engine.evaluateSurvival(state);
+        List<Integer> unlocked = this.objectiveEngine.evaluateSurvival(state);
         
         for (int titleId : unlocked) {
             publishUnlockEvent(state, titleId);

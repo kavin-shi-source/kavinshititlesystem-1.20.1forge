@@ -13,6 +13,7 @@ import com.kavinshi.playertitle.sync.VelocityEventBus;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.server.ServerStartingEvent;
+import net.minecraftforge.event.server.ServerStoppedEvent;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -35,6 +36,7 @@ public final class KavinshiPlayerTitleMod {
         registerClusterSyncHandler();
 
         MinecraftForge.EVENT_BUS.addListener(this::onServerStarting);
+        MinecraftForge.EVENT_BUS.addListener(this::onServerStopped);
 
         LOGGER.info("Initializing PlayerTitle Server Module");
     }
@@ -43,6 +45,12 @@ public final class KavinshiPlayerTitleMod {
         MinecraftServer server = event.getServer();
         RewriteBootstrap.getInstance().onServerStarting(server);
         LOGGER.info("PlayerTitleDataBridge initialized on server start");
+    }
+
+    private void onServerStopped(ServerStoppedEvent event) {
+        MinecraftServer server = event.getServer();
+        RewriteBootstrap.getInstance().onServerStopping(server);
+        LOGGER.info("PlayerTitle Server Module stopped");
     }
 
     private void registerServerPacketHandlers() {
@@ -55,6 +63,8 @@ public final class KavinshiPlayerTitleMod {
                         BuffHandler.removeBuffs(ctx.sender, oldId);
                     }
                     state.setEquippedTitleId(-1);
+                    com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
+                            RewriteBootstrap.getInstance().getTitleRepository(), state);
                     TitleSyncHandler.syncPlayerData(ctx.sender);
                     TitleSyncHandler.broadcastEquippedTitle(ctx.sender);
                 });
@@ -67,6 +77,8 @@ public final class KavinshiPlayerTitleMod {
                     if (result.success()) {
                         if (oldId >= 0) BuffHandler.removeBuffs(ctx.sender, oldId);
                         BuffHandler.applyBuffs(ctx.sender, ctx.titleId);
+                        com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
+                                RewriteBootstrap.getInstance().getTitleRepository(), state);
                         TitleSyncHandler.syncPlayerData(ctx.sender);
                         TitleSyncHandler.broadcastEquippedTitle(ctx.sender);
                     }

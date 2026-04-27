@@ -75,7 +75,7 @@ public final class PlayerTitleDataBridge {
         }
     }
 
-    private void triggerSync(UUID playerId) {
+    public void triggerSync(UUID playerId) {
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         if (player == null) return;
 

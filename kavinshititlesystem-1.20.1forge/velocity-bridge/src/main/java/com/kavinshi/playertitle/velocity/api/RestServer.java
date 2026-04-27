@@ -16,10 +16,12 @@ public class RestServer {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServer.class);
     private final Javalin app;
     private final HeadingService headingService;
+    private final com.kavinshi.playertitle.velocity.database.DatabaseManager dbManager;
     private final Algorithm algorithm;
 
-    public RestServer(int port, String jwtSecret, HeadingService headingService) {
+    public RestServer(int port, String jwtSecret, HeadingService headingService, com.kavinshi.playertitle.velocity.database.DatabaseManager dbManager) {
         this.headingService = headingService;
+        this.dbManager = dbManager;
         this.algorithm = Algorithm.HMAC256(jwtSecret);
         
         this.app = Javalin.create(config -> {
@@ -52,6 +54,56 @@ public class RestServer {
 
         app.post("/api/v1/headings/grant", this::handleGrant);
         app.post("/api/v1/headings/revoke", this::handleRevoke);
+        app.get("/api/v1/player/{uuid}/title", this::handleGetTitle);
+    }
+
+    private void handleGetTitle(Context ctx) {
+        String uuidStr = ctx.pathParam("uuid");
+        try {
+            UUID uuid = UUID.fromString(uuidStr);
+            CompletableFuture.supplyAsync(() -> {
+                TitleDataResponse resp = new TitleDataResponse();
+                resp.uuid = uuidStr;
+                resp.equippedTitleId = -1;
+                resp.unlockedTitles = new java.util.ArrayList<>();
+                
+                try (java.sql.Connection conn = dbManager.getConnection()) {
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("SELECT equipped_id FROM player_titles_core WHERE uuid = ?")) {
+                        stmt.setString(1, uuid.toString());
+                        try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                            if (rs.next()) {
+                                resp.equippedTitleId = rs.getInt("equipped_id");
+                            }
+                        }
+                    }
+                    try (java.sql.PreparedStatement stmt = conn.prepareStatement("SELECT title_id FROM player_unlocked_titles WHERE uuid = ?")) {
+                        stmt.setString(1, uuid.toString());
+                        try (java.sql.ResultSet rs = stmt.executeQuery()) {
+                            while (rs.next()) {
+                                resp.unlockedTitles.add(rs.getInt("title_id"));
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Failed to load title data for {}", uuid, e);
+                    throw new RuntimeException(e);
+                }
+                return resp;
+            }).thenAccept(resp -> {
+                ctx.status(200).json(resp);
+            }).exceptionally(ex -> {
+                ctx.status(500).json(new ApiResponse(false, "Internal error"));
+                return null;
+            });
+        } catch (IllegalArgumentException e) {
+            ctx.status(400).json(new ApiResponse(false, "Invalid UUID"));
+        }
+    }
+
+    private static class TitleDataResponse {
+        public String uuid;
+        public int equippedTitleId;
+        public java.util.List<Integer> unlockedTitles;
     }
 
     private void handleGrant(Context ctx) {

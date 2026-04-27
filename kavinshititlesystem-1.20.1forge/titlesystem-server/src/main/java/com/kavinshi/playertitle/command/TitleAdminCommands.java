@@ -39,30 +39,30 @@ public final class TitleAdminCommands {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         String heading = StringArgumentType.getString(ctx, "heading");
         
-        HeadingRequestPacket packet = new HeadingRequestPacket(target.getUUID(), heading, true);
-        NetworkHandler.getChannel().sendToServer(packet);
-        // Fallback for local changes just in case:
         com.kavinshi.playertitle.player.TitleCapability.get(target).ifPresent(state -> {
             state.setHeading(heading);
             com.kavinshi.playertitle.handler.TitleSyncHandler.syncPlayerData(target);
             com.kavinshi.playertitle.handler.TitleSyncHandler.broadcastEquippedTitle(target);
+            
+            // Sync to proxy
+            com.kavinshi.playertitle.bootstrap.RewriteBootstrap.getInstance().getPlayerTitleDataBridge().triggerSync(target.getUUID());
         });
-        ctx.getSource().sendSuccess(() -> Component.literal("Sent grant heading request for " + target.getName().getString()), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Granted heading [" + heading + "] for " + target.getName().getString()), true);
         return 1;
     }
 
     private static int revokeHeading(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
         
-        HeadingRequestPacket packet = new HeadingRequestPacket(target.getUUID(), "", false);
-        NetworkHandler.getChannel().sendToServer(packet);
-        // Fallback for local changes just in case:
         com.kavinshi.playertitle.player.TitleCapability.get(target).ifPresent(state -> {
             state.setHeading("");
             com.kavinshi.playertitle.handler.TitleSyncHandler.syncPlayerData(target);
             com.kavinshi.playertitle.handler.TitleSyncHandler.broadcastEquippedTitle(target);
+            
+            // Sync to proxy
+            com.kavinshi.playertitle.bootstrap.RewriteBootstrap.getInstance().getPlayerTitleDataBridge().triggerSync(target.getUUID());
         });
-        ctx.getSource().sendSuccess(() -> Component.literal("Sent revoke heading request for " + target.getName().getString()), true);
+        ctx.getSource().sendSuccess(() -> Component.literal("Revoked heading for " + target.getName().getString()), true);
         return 1;
     }
 }

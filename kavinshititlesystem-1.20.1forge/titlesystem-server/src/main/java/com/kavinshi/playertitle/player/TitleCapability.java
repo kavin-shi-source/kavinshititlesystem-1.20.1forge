@@ -42,21 +42,13 @@ public final class TitleCapability {
 
         @Override
         public CompoundTag serializeNBT() {
-            return new ForgePlayerTitleStateStore().write(data);
+            // We use MySQL for persistence, so we don't need to save data into the player's local NBT file.
+            return new CompoundTag();
         }
 
         @Override
         public void deserializeNBT(CompoundTag nbt) {
-            UUID playerId = data.getPlayerId();
-            PlayerTitleState restored = new ForgePlayerTitleStateStore().read(playerId, nbt);
-
-            for (int titleId : restored.getUnlockedTitleIds()) {
-                data.unlockTitle(titleId);
-            }
-            data.setKillCounts(restored.getKillCounts());
-            data.setAliveMinutes(restored.getAliveMinutes());
-            data.setEquippedTitleId(restored.getEquippedTitleId());
-            data.markClean();
+            // We use MySQL for persistence, data will be fetched on PlayerLoggedInEvent.
         }
     }
 }

@@ -1,6 +1,9 @@
 package com.kavinshi.playertitle.bootstrap;
 
 import com.kavinshi.playertitle.config.JsonTitleConfigRepository;
+import com.kavinshi.playertitle.database.DatabaseConfig;
+import com.kavinshi.playertitle.database.DatabaseManager;
+import com.kavinshi.playertitle.database.PlayerTitleRepository;
 import com.kavinshi.playertitle.handler.PlayerTitleDataBridge;
 import com.kavinshi.playertitle.icon.IconManager;
 import com.kavinshi.playertitle.icon.IconService;
@@ -9,6 +12,7 @@ import com.kavinshi.playertitle.sync.*;
 import com.kavinshi.playertitle.service.TitleEquipService;
 import com.kavinshi.playertitle.service.TitleProgressService;
 import com.kavinshi.playertitle.title.TitleRegistry;
+import com.kavinshi.playertitle.config.TitleConfig;
 import com.mojang.logging.LogUtils;
 import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
@@ -31,6 +35,8 @@ public final class RewriteBootstrap {
     private ClusterEventBus eventBus;
     private ClusterConfig clusterConfig;
     private PlayerTitleDataBridge playerTitleDataBridge;
+    private DatabaseManager dbManager;
+    private PlayerTitleRepository titleRepository;
 
     private RewriteBootstrap() {
         initializeComponents();
@@ -50,8 +56,28 @@ public final class RewriteBootstrap {
         return instance;
     }
 
+    public PlayerTitleRepository getTitleRepository() {
+        return titleRepository;
+    }
+
     private void initializeComponents() {
         LOGGER.info("Initializing PlayerTitle components...");
+
+        // Initialize Database
+        DatabaseConfig dbConfig = new DatabaseConfig();
+        dbConfig.setServerMode(TitleConfig.SERVER.serverMode.get());
+        dbConfig.setHost(TitleConfig.SERVER.dbHost.get());
+        dbConfig.setPort(TitleConfig.SERVER.dbPort.get());
+        dbConfig.setDatabase(TitleConfig.SERVER.dbName.get());
+        dbConfig.setUsername(TitleConfig.SERVER.dbUser.get());
+        dbConfig.setPassword(TitleConfig.SERVER.dbPass.get());
+        dbConfig.setPoolSize(TitleConfig.SERVER.dbPoolSize.get());
+        dbConfig.setTimeout(TitleConfig.SERVER.dbTimeout.get());
+        
+        this.dbManager = new DatabaseManager(dbConfig);
+        this.dbManager.init();
+        this.titleRepository = new PlayerTitleRepository(this.dbManager);
+        LOGGER.info("Database initialized");
 
         NetworkHandler.init();
         NetworkHandler.registerPackets();
@@ -91,7 +117,7 @@ public final class RewriteBootstrap {
         }
 
         this.titleEquipService = new TitleEquipService(this.eventFactory, this.eventBus);
-        this.titleProgressService = new TitleProgressService(this.eventFactory, this.eventBus);
+        this.titleProgressService = new TitleProgressService(this.eventFactory, this.eventBus, this.titleRegistry);
         LOGGER.info("PlayerTitle components initialized successfully");
     }
 
@@ -151,16 +177,11 @@ public final class RewriteBootstrap {
     private ClusterEventBus createEventBus(ClusterConfig config) {
         return switch (config.getMode()) {
             case LOCAL -> new LocalEventBus();
-            case REDIS -> new RedisEventBus(
-                config.getRedisHost(),
-                config.getRedisPort(),
-                config.getRedisPassword(),
-                config.getChannelName()
-            );
             case VELOCITY -> new VelocityEventBus(
                 config.getChannelName(),
                 config.getServerName()
             );
+            default -> new LocalEventBus();
         };
     }
 
@@ -182,6 +203,21 @@ public final class RewriteBootstrap {
             this.playerTitleDataBridge = new PlayerTitleDataBridge(server, titleRegistry, clusterConfig);
             this.playerTitleDataBridge.subscribeToEvents(eventBus);
             LOGGER.info("PlayerTitleDataBridge initialized and subscribed to events");
+        }
+    }
+
+    public void onServerStopping(MinecraftServer server) {
+        if (this.dbManager != null) {
+            this.dbManager.close();
+            LOGGER.info("Database connection pool closed");
+        }
+        if (this.eventBus != null) {
+            try {
+                this.eventBus.stop();
+                LOGGER.info("Event bus stopped");
+            } catch (Exception e) {
+                LOGGER.warn("Failed to stop event bus", e);
+            }
         }
     }
 

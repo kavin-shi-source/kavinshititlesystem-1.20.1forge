@@ -1,6 +1,7 @@
 package com.kavinshi.playertitle.client.gui;
 
 import com.kavinshi.playertitle.client.ClientTitleData;
+import com.kavinshi.playertitle.client.config.ClientTabConfig;
 import com.kavinshi.playertitle.title.ChromaType;
 import com.kavinshi.playertitle.util.TabModDetector;
 import net.minecraft.client.Minecraft;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public final class CustomTabOverlay {
 
     private static boolean hasTabMod() {
+        if (!ClientTabConfig.get().isUseCustomTab()) return true;
         return TabModDetector.hasTabMod();
     }
 

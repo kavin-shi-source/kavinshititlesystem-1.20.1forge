@@ -12,7 +12,9 @@ public final class PlayerTitleState {
     private volatile int equippedTitleId = -1;
     private volatile int aliveMinutes;
     private String heading = "";
-    private boolean dirty = true;
+    private boolean dirty = false;
+    private volatile int version = 1;
+    private volatile long lastLoadTime = 0;
 
     public PlayerTitleState(UUID playerId) {
         this.playerId = playerId;
@@ -103,6 +105,37 @@ public final class PlayerTitleState {
             }
             this.dirty = true;
         }
+    }
+
+    public void setKillCountsSilently(Map<String, Integer> newCounts) {
+        this.killCounts.clear();
+        for (var entry : newCounts.entrySet()) {
+            this.killCounts.put(entry.getKey().toLowerCase(), entry.getValue());
+        }
+    }
+
+    public void unlockTitleSilently(int titleId) {
+        this.unlockedTitles.add(titleId);
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public long getLastLoadTime() {
+        return lastLoadTime;
+    }
+
+    public void updateLastLoadTime() {
+        this.lastLoadTime = System.currentTimeMillis();
+    }
+
+    public boolean isExpired(long ttlMillis) {
+        return System.currentTimeMillis() - this.lastLoadTime > ttlMillis;
     }
 
     public boolean isDirty() {

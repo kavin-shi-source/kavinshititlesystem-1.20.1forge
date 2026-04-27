@@ -35,6 +35,10 @@ dependencies {
     implementation 'com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2'
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2'
     
+    // 数据库持久化依赖
+    implementation 'com.zaxxer:HikariCP:5.0.1'
+    implementation 'org.xerial:sqlite-jdbc:3.45.1.0'
+    
     // 测试依赖
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'

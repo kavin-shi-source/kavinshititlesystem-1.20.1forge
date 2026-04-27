@@ -62,6 +62,23 @@ public class TitleClusterBridgePlugin {
     private HeadingService headingService;
     private RestServer restServer;
 
+    public Logger getLogger() { return logger; }
+
+    public void reload() throws Exception {
+        this.config = BridgeConfig.load(dataDirectory, logger);
+        if (this.dbManager != null) {
+            this.dbManager.close();
+        }
+        if (this.restServer != null) {
+            this.restServer.stop();
+        }
+        
+        this.dbManager = new DatabaseManager(config, dataDirectory);
+        this.headingService = new HeadingService(dbManager, titleCache);
+        this.restServer = new RestServer(8080, "test-secret-key-replace-in-prod", headingService, dbManager);
+        logger.info("Database and REST API reloaded successfully");
+    }
+
     @Subscribe
     public void onProxyInit(ProxyInitializeEvent event) {
         this.config = BridgeConfig.load(dataDirectory, logger);
@@ -84,7 +101,7 @@ public class TitleClusterBridgePlugin {
         try {
             dbManager = new DatabaseManager(config, dataDirectory);
             headingService = new HeadingService(dbManager, titleCache);
-            restServer = new RestServer(8080, "test-secret-key-replace-in-prod", headingService);
+            restServer = new RestServer(8080, "test-secret-key-replace-in-prod", headingService, dbManager);
             logger.info("Database and REST API initialized");
         } catch (Exception e) {
             logger.error("Failed to initialize database and REST API", e);
@@ -96,6 +113,11 @@ public class TitleClusterBridgePlugin {
                 logger.debug("Evicted {} stale title cache entries", evicted);
             }
         }).repeat(5, TimeUnit.MINUTES).schedule();
+
+        proxy.getCommandManager().register(
+            proxy.getCommandManager().metaBuilder("playertitle-bridge").build(),
+            new BridgeCommand(this)
+        );
 
         logger.info("Registered channels: {}, {}, {}", CLUSTER_CHANNEL, DATA_CHANNEL, CHAT_CHANNEL);
         logger.info("PlayerTitle Cluster Bridge initialized");

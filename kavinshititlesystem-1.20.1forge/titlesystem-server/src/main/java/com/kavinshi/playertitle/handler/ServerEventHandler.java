@@ -4,7 +4,6 @@ import com.kavinshi.playertitle.bootstrap.RewriteBootstrap;
 import com.kavinshi.playertitle.config.TitleConfig;
 import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.network.SyncPlayerTitlesPacket;
-import com.kavinshi.playertitle.player.ForgePlayerTitleStateStore;
 import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.player.TitleCapability;
 import com.kavinshi.playertitle.title.TitleRegistry;
@@ -32,7 +31,6 @@ public final class ServerEventHandler {
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerEventHandler.class);
 
     private static final Map<UUID, Long> aliveTickMap = new ConcurrentHashMap<>();
-    private static final Map<UUID, CompoundTag> deathDataCache = new ConcurrentHashMap<>();
     private static long lastProgressCheckTick = 0;
     private static int currentPlayerIndex = 0;
 
@@ -45,6 +43,10 @@ public final class ServerEventHandler {
                     String entityId = mob.getType().getDescriptionId();
                     RewriteBootstrap.getInstance().getTitleProgressService()
                             .recordKill(state, getTitleRegistry(), entityId, true, mob.getUUID().toString());
+                    if (state.isDirty()) {
+                        com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
+                                RewriteBootstrap.getInstance().getTitleRepository(), state);
+                    }
                 });
             }
         }
@@ -53,12 +55,7 @@ public final class ServerEventHandler {
     @SubscribeEvent(priority = net.minecraftforge.eventbus.api.EventPriority.HIGHEST)
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity() instanceof Player player) {
-            TitleCapability.get(player).ifPresent(state -> {
-                CompoundTag nbt = new ForgePlayerTitleStateStore().write(state);
-                deathDataCache.put(player.getUUID(), nbt);
-                LOGGER.debug("Cached death data for player {} with {} unlocked titles",
-                    player.getUUID(), state.getUnlockedTitleIds().size());
-            });
+            // No longer saving NBT cache here. The capability object itself will be preserved during cloning.
         }
     }
 
@@ -91,6 +88,10 @@ public final class ServerEventHandler {
                     RewriteBootstrap.getInstance().getTitleProgressService()
                             .recordAliveMinutes(state, getTitleRegistry(), aliveMinutes);
                 }
+                if (state.isDirty()) {
+                    com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
+                            RewriteBootstrap.getInstance().getTitleRepository(), state);
+                }
             });
 
             currentPlayerIndex++;
@@ -107,6 +108,10 @@ public final class ServerEventHandler {
                         RewriteBootstrap.getInstance().getTitleProgressService()
                                 .recordAliveMinutes(state, getTitleRegistry(), aliveMinutes);
                     }
+                    if (state.isDirty()) {
+                        com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
+                                RewriteBootstrap.getInstance().getTitleRepository(), state);
+                    }
                 });
             }
             lastProgressCheckTick = currentTick;
@@ -120,26 +125,58 @@ public final class ServerEventHandler {
             LOGGER.debug("Player joined: {} ({})", playerId, player.getGameProfile().getName());
 
             aliveTickMap.put(playerId, (long) player.server.getTickCount());
-            TitleCapability.get(player).ifPresent(state -> {
-                LOGGER.debug("Player data loaded: {} unlocked titles, {} kill entries, equipped title: {}",
-                    state.getUnlockedTitleIds().size(), state.getKillCounts().size(), state.getEquippedTitleId());
-                syncPlayerData(player, state);
+
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    PlayerTitleState dbState = RewriteBootstrap.getInstance().getTitleRepository().loadPlayerState(playerId);
+                    player.server.execute(() -> {
+                        TitleCapability.get(player).ifPresent(state -> {
+                            // Merge from dbState
+                            state.setEquippedTitleId(dbState.getEquippedTitleId());
+                            state.setAliveMinutes(dbState.getAliveMinutes());
+                            state.setVersion(dbState.getVersion());
+                            for (int titleId : dbState.getUnlockedTitleIds()) {
+                                state.unlockTitleSilently(titleId);
+                            }
+                            state.setKillCountsSilently(dbState.getKillCounts());
+                            state.updateLastLoadTime();
+                            state.markClean();
+                            
+                            LOGGER.debug("Player data loaded from DB: {} unlocked titles, {} kill entries, equipped title: {}",
+                                state.getUnlockedTitleIds().size(), state.getKillCounts().size(), state.getEquippedTitleId());
+                            
+                            syncPlayerData(player, state);
+                            TitleSyncHandler.syncTitleRegistryToPlayer(player);
+                            TitleSyncHandler.syncAllEquippedTitlesToPlayer(player);
+                        });
+                    });
+                } catch (java.sql.SQLException e) {
+                    LOGGER.error("Failed to load player state from DB on join for {}", playerId, e);
+                }
             });
 
             if (!TitleCapability.get(player).isPresent()) {
                 LOGGER.error("Player joined but TitleCapability is missing for {}", playerId);
             }
-
-            TitleSyncHandler.syncTitleRegistryToPlayer(player);
-            TitleSyncHandler.syncAllEquippedTitlesToPlayer(player);
         }
     }
 
     @SubscribeEvent
     public static void onPlayerLeave(PlayerEvent.PlayerLoggedOutEvent event) {
         UUID uuid = event.getEntity().getUUID();
+        
+        // Save state async
+        TitleCapability.get(event.getEntity()).ifPresent(state -> {
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    RewriteBootstrap.getInstance().getTitleRepository().savePlayerState(state);
+                } catch (java.sql.SQLException e) {
+                    LOGGER.error("Failed to save player state on leave for {}", uuid, e);
+                }
+            });
+        });
+
         aliveTickMap.remove(uuid);
-        deathDataCache.remove(uuid);
         RewriteBootstrap.getInstance().getRevisionService().removePlayer(uuid);
         com.kavinshi.playertitle.network.RequestSyncPacket.cleanupPlayer(uuid);
     }
@@ -151,39 +188,27 @@ public final class ServerEventHandler {
         UUID playerId = event.getOriginal().getUUID();
         LOGGER.debug("Player clone event for death: {}", playerId);
 
-        CompoundTag savedNbt = deathDataCache.remove(playerId);
-        if (savedNbt == null) {
-            LOGGER.warn("No cached death data for player {}, attempting to read from original capability", playerId);
-            TitleCapability.get(event.getOriginal()).ifPresent(oldState -> {
-                CompoundTag fallbackNbt = new ForgePlayerTitleStateStore().write(oldState);
-                copyTitleData(fallbackNbt, playerId, event);
+        TitleCapability.get(event.getOriginal()).ifPresent(oldState -> {
+            TitleCapability.get(event.getEntity()).ifPresent(newState -> {
+                // Copy state in-memory
+                for (int titleId : oldState.getUnlockedTitleIds()) {
+                    newState.unlockTitleSilently(titleId);
+                }
+                newState.setKillCountsSilently(oldState.getKillCounts());
+                newState.setEquippedTitleId(oldState.getEquippedTitleId());
+                newState.setVersion(oldState.getVersion());
+                // Alive minutes reset on death
+                newState.setAliveMinutes(0);
+
+                int equippedId = oldState.getEquippedTitleId();
+                if (equippedId >= 0) {
+                    BuffHandler.applyBuffs((ServerPlayer) event.getEntity(), equippedId);
+                }
+
+                newState.markClean();
+                LOGGER.debug("Copied title data for player {}: {} unlocked titles, equipped: {}",
+                    playerId, newState.getUnlockedTitleIds().size(), newState.getEquippedTitleId());
             });
-            return;
-        }
-
-        copyTitleData(savedNbt, playerId, event);
-    }
-
-    private static void copyTitleData(CompoundTag savedNbt, UUID playerId, PlayerEvent.Clone event) {
-        PlayerTitleState oldState = new ForgePlayerTitleStateStore().read(playerId, savedNbt);
-
-        TitleCapability.get(event.getEntity()).ifPresent(newState -> {
-            for (int titleId : oldState.getUnlockedTitleIds()) {
-                newState.unlockTitle(titleId);
-            }
-            newState.setKillCounts(oldState.getKillCounts());
-            newState.setEquippedTitleId(oldState.getEquippedTitleId());
-
-            int equippedId = oldState.getEquippedTitleId();
-            if (equippedId >= 0) {
-                BuffHandler.applyBuffs((ServerPlayer) event.getEntity(), equippedId);
-            }
-
-            newState.setAliveMinutes(0);
-
-            newState.markClean();
-            LOGGER.debug("Copied title data for player {}: {} unlocked titles, equipped: {}",
-                playerId, newState.getUnlockedTitleIds().size(), newState.getEquippedTitleId());
         });
     }
 

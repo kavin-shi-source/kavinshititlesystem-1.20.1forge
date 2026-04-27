@@ -11,12 +11,6 @@ public enum ClusterMode {
     LOCAL,
     
     /**
-     * Redis模式 - 通过Redis Pub/Sub进行跨服务器通信。
-     * 适用于多服务器环境，需要Redis服务器。
-     */
-    REDIS,
-    
-    /**
      * Velocity模式 - 通过Velocity代理进行通信。
      * 适用于使用Velocity代理的多服务器环境。
      */
@@ -45,13 +39,6 @@ public enum ClusterMode {
      */
     public boolean isLocal() {
         return this == LOCAL;
-    }
-    
-    /**
-     * 检查是否为Redis模式。
-     */
-    public boolean isRedis() {
-        return this == REDIS;
     }
     
     /**
