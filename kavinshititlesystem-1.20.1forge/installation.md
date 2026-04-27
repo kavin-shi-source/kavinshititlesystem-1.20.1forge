@@ -98,8 +98,8 @@ chmod +x deploy.sh
 
 ## 5. 常见问题 (FAQ)
 
-**Q: 启动子服时报错 `NoClassDefFoundError: io/lettuce/core/RedisClient`？**
-A: 请检查子服的 `mods/` 文件夹是否漏放了 `titlesystem-common-1.3.0.jar`。Redis 的通信核心库均被打包在 common 模块中，服务端必须同时安装 common 和 server 两个 jar 包。
+**Q: 为什么不需要单独配置 Redis 连接了？**
+A: 本模组已移除对 Redis 的强制依赖。现在的跨服同步利用了底层的 MySQL 并发控制和代理端的原生通信机制。请务必配置正确的 MySQL/JDBC 参数。
 
 **Q: 为什么我设置了带色彩的头衔，但游戏里显示的渐变色不会流动（没有跑马灯动画）？**
 A: 为了彻底消除高并发下的客户端 GC 风暴，v1.3.0 移除了逐帧的颜色重计算，转为静态缓存渲染。因此渐变色目前为基于玩家名称哈希计算的静态展示，这属于预期的性能优化行为。

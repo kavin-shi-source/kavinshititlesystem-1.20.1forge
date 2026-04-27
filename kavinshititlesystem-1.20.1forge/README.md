@@ -1,23 +1,23 @@
 # Kavinshi PlayerTitle
 
-Minecraft Forge 1.20.1 称号管理模组，支持跨服同步（Redis + Velocity）。
+Minecraft Forge 1.20.1 称号管理模组，支持跨服同步（MySQL + Velocity）。
 
 ## 架构
 
 ```
-Forge 模组（权威业务） -> Redis（跨服事件） -> Velocity 插件（展示协调） -> 聊天/Tab/Velocitab
+Forge 模组（权威业务） -> MySQL（持久化与并发控制） -> Velocity 插件（跨服展示协调） -> 聊天/Tab/Velocitab
 ```
 
 ## 模块结构
 
 - `titlesystem-common` — 共享领域模型、事件、网络包
-- `titlesystem-server` — 服务端业务逻辑、Forge 集成、Redis 发布
+- `titlesystem-server` — 服务端业务逻辑、Forge 集成、数据库同步
 - `titlesystem-client` — 客户端渲染、字体资源包、图标显示
 
 ## 环境要求
 
 - Minecraft 1.20.1 / Forge 47.4.0+ / Java 17
-- Redis（跨服同步时需要）
+- MySQL（跨服同步时必须）或 SQLite（仅单服运行）
 
 ## 构建
 
