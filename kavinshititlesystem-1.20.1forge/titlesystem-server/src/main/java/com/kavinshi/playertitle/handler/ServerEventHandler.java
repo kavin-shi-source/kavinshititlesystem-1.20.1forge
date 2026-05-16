@@ -6,8 +6,6 @@ import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.network.SyncPlayerTitlesPacket;
 import com.kavinshi.playertitle.player.PlayerTitleState;
 import com.kavinshi.playertitle.player.TitleCapability;
-import com.kavinshi.playertitle.title.TitleRegistry;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -39,15 +37,9 @@ public final class ServerEventHandler {
         LivingEntity entity = event.getEntity();
         if (entity instanceof Mob mob && mob instanceof Enemy) {
             if (event.getSource().getEntity() instanceof ServerPlayer player) {
-                TitleCapability.get(player).ifPresent(state -> {
-                    String entityId = mob.getType().getDescriptionId();
-                    RewriteBootstrap.getInstance().getTitleProgressService()
-                            .recordKill(state, getTitleRegistry(), entityId, true, mob.getUUID().toString());
-                    if (state.isDirty()) {
-                        com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
-                                RewriteBootstrap.getInstance().getTitleRepository(), state);
-                    }
-                });
+                String entityId = mob.getType().getDescriptionId();
+                RewriteBootstrap.getInstance().getDataSyncService().handleProgressUpdate(player,
+                        (state, service, registry) -> service.recordKill(state, registry, entityId, true, mob.getUUID().toString()));
             }
         }
     }
@@ -75,22 +67,19 @@ public final class ServerEventHandler {
             return;
         }
 
+        var syncService = RewriteBootstrap.getInstance().getDataSyncService();
+
         if (framePacing) {
             if (currentPlayerIndex >= players.size()) {
                 currentPlayerIndex = 0;
             }
 
             ServerPlayer player = players.get(currentPlayerIndex);
-            TitleCapability.get(player).ifPresent(state -> {
+            syncService.handleProgressUpdate(player, (state, service, registry) -> {
                 long startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> currentTick);
                 int aliveMinutes = (int) ((currentTick - startTick) / 1200);
                 if (aliveMinutes != state.getAliveMinutes()) {
-                    RewriteBootstrap.getInstance().getTitleProgressService()
-                            .recordAliveMinutes(state, getTitleRegistry(), aliveMinutes);
-                }
-                if (state.isDirty()) {
-                    com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
-                            RewriteBootstrap.getInstance().getTitleRepository(), state);
+                    service.recordAliveMinutes(state, registry, aliveMinutes);
                 }
             });
 
@@ -101,16 +90,11 @@ public final class ServerEventHandler {
             }
         } else {
             for (ServerPlayer player : players) {
-                TitleCapability.get(player).ifPresent(state -> {
+                syncService.handleProgressUpdate(player, (state, service, registry) -> {
                     long startTick = aliveTickMap.computeIfAbsent(player.getUUID(), k -> currentTick);
                     int aliveMinutes = (int) ((currentTick - startTick) / 1200);
                     if (aliveMinutes != state.getAliveMinutes()) {
-                        RewriteBootstrap.getInstance().getTitleProgressService()
-                                .recordAliveMinutes(state, getTitleRegistry(), aliveMinutes);
-                    }
-                    if (state.isDirty()) {
-                        com.kavinshi.playertitle.database.DatabaseAsyncWriter.queueWrite(
-                                RewriteBootstrap.getInstance().getTitleRepository(), state);
+                        service.recordAliveMinutes(state, registry, aliveMinutes);
                     }
                 });
             }
@@ -231,9 +215,5 @@ public final class ServerEventHandler {
         SyncPlayerTitlesPacket packet = SyncPlayerTitlesPacket.fromPlayerTitleState(state);
         NetworkHandler.getChannel().send(PacketDistributor.PLAYER.with(() -> player), packet);
         state.markClean();
-    }
-
-    private static TitleRegistry getTitleRegistry() {
-        return RewriteBootstrap.getInstance().getTitleRegistry();
     }
 }

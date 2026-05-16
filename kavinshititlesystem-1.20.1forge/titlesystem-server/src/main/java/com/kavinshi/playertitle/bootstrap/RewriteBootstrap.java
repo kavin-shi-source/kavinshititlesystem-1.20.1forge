@@ -9,6 +9,7 @@ import com.kavinshi.playertitle.icon.IconManager;
 import com.kavinshi.playertitle.icon.IconService;
 import com.kavinshi.playertitle.network.NetworkHandler;
 import com.kavinshi.playertitle.sync.*;
+import com.kavinshi.playertitle.service.PlayerDataSyncService;
 import com.kavinshi.playertitle.service.TitleEquipService;
 import com.kavinshi.playertitle.service.TitleProgressService;
 import com.kavinshi.playertitle.title.TitleRegistry;
@@ -32,6 +33,7 @@ public final class RewriteBootstrap {
     private TitleEventFactory eventFactory;
     private TitleEquipService titleEquipService;
     private TitleProgressService titleProgressService;
+    private PlayerDataSyncService dataSyncService;
     private ClusterEventBus eventBus;
     private ClusterConfig clusterConfig;
     private PlayerTitleDataBridge playerTitleDataBridge;
@@ -118,6 +120,7 @@ public final class RewriteBootstrap {
 
         this.titleEquipService = new TitleEquipService(this.eventFactory, this.eventBus);
         this.titleProgressService = new TitleProgressService(this.eventFactory, this.eventBus, this.titleRegistry);
+        this.dataSyncService = new PlayerDataSyncService(this.titleRepository, this.titleProgressService, this.titleRegistry);
         LOGGER.info("PlayerTitle components initialized successfully");
     }
 
@@ -192,6 +195,7 @@ public final class RewriteBootstrap {
     public TitleEventFactory getEventFactory() { return eventFactory; }
     public TitleEquipService getTitleEquipService() { return titleEquipService; }
     public TitleProgressService getTitleProgressService() { return titleProgressService; }
+    public PlayerDataSyncService getDataSyncService() { return dataSyncService; }
     public ClusterEventBus getEventBus() { return eventBus; }
     public ClusterConfig getClusterConfig() { return clusterConfig; }
 
